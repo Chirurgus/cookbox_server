@@ -1,0 +1,15 @@
+{
+  "name": "cookbox_server",
+  "version": "1.0.0",
+  "description": "Cookbox REST API",
+  "main": "cookbox.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Alexander Sorochynskyi",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.16.3",
+    "sqlite3": "^4.0.0"
+  }
+}
