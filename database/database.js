@@ -13,7 +13,8 @@ class Recipe {
                 source,
                 ingredient_list,
                 instruction_list,
-                comment_list) {
+                comment_list,
+                tag_list) {
         this.id = id;
         this.name = name;
         this.short_description = short_description;
@@ -25,6 +26,7 @@ class Recipe {
         this.ingredient_list = ingredient_list;
         this.instruction_list = instruction_list;
         this.comment_list = comment_list;
+        this.tag_list = tag_list
     }
 }
 
@@ -42,6 +44,15 @@ function open_db(db_location) {
             console.error(err.mesage);
         else
             console.log("Opened db");
+    });
+}
+
+function close_db(db) {
+    db.close((err) => {
+        if (err) {
+            return console.error(err.message);
+        }
+        console.log('Close the database connection.');
     });
 }
 
@@ -107,37 +118,6 @@ function read_tag_list(id, db) {
     return ret;
 }
 
-function update_ingredient_list(id,ingredients,db) {
-    db.serialize(() => {
-            });
-}
-
-function update_instruction_list(id,instruction,db) {
-    db.serialize(() => {
-            });
-}
-
-function update_comment_list(id,comments,db) {
-    db.serialize(() => {
-            });
-}
-
-function update_tag_list(id, db) {
-    let sql = 'SELECT * FROM tag_list WHERE recipe_id = ?';
-    let params = [id];
-
-    var ret = [];
-    db.all(sql, params, (err, rows) => {
-        if (err) {
-            throw err;
-        }
-        rows.forEach(row => {
-           ret.push(row.tag_id); 
-        });
-    });
-    return ret;
-}
-
 exports.get = function(id, callback) {
     db = open_db(db_location);
     let sql = 'SELECT * FROM recipe WHERE id = ?';
@@ -161,15 +141,11 @@ exports.get = function(id, callback) {
                            row.source,
                            ingredient_list,
                            instruction_list,
-                           comment_list);
+                           comment_list,
+                           tag_list);
         callback(null, JSON.stringify(ret));
     });
-    db.close((err) => {
-        if (err) {
-            return console.error(err.message);
-        }
-        console.log('Close the database connection.');
-    });
+   
 }
 
 exports.put = function(recipe, callback) {
@@ -230,13 +206,40 @@ exports.put = function(recipe, callback) {
                     [recipe.id, tag]);
         });
 
-        var insert = db.get("select id from recipe where id = ?", [recipe.id], (err,row) => {
-            if (err) return console.error(err.mesage);
-            row ? false : true;
-        });
-       
         db.run("COMMIT");
+
+        close_db(db);
     });
 
     callback(null, recipe)
+}
+
+exports.all_ids = function(callback) {
+    db = open_db(db_location);
+    db.all("SELECT id FROM recipe", [], (err, rows) => {
+        if (err) {
+            throw err;
+        }
+        ids = [];
+        rows.forEach(row => {
+           ids.push(row.id); 
+        });
+        close_db(db);
+        callback(null, ids);
+    });
+}
+
+exports.tag = function(id, callback) {
+    db = open_db(db_location);
+    db.all("SELECT id FROM recipe", [], (err, rows) => {
+        if (err) {
+            throw err;
+        }
+        ids = [];
+        rows.forEach(row => {
+           ids.push(row.id); 
+        });
+        close_db(db);
+        callback(null, ids);
+    });
 }
