@@ -38,6 +38,13 @@ class Ingredient {
     }
 }
 
+class Tag {
+    constructor(id, tag) {
+        this.id = id;
+        this.tag = tag;
+    }
+}
+
 function open_db(db_location) {
     return new sqlite3.Database("database/recipe_v4.db", (err) => {
         if (err)
@@ -143,6 +150,7 @@ exports.get = function(id, callback) {
                            instruction_list,
                            comment_list,
                            tag_list);
+        close_db(db);
         callback(null, JSON.stringify(ret));
     });
    
@@ -229,9 +237,9 @@ exports.all_ids = function(callback) {
     });
 }
 
-exports.tag = function(id, callback) {
+exports.all_tags = function(callback) {
     db = open_db(db_location);
-    db.all("SELECT id FROM recipe", [], (err, rows) => {
+    db.all("SELECT id FROM tag", [], (err, rows) => {
         if (err) {
             throw err;
         }
@@ -241,5 +249,36 @@ exports.tag = function(id, callback) {
         });
         close_db(db);
         callback(null, ids);
+    });
+}
+
+exports.tag = function(id, callback) {
+    db = open_db(db_location);
+    db.get("SELECT id,tag FROM tag WHERE id = ?", [id], (err, row) => {
+        if (err) {
+            throw err;
+        }
+        close_db(db);
+        tag = new Tag(row.id, row.tag);
+        callback(null, tag);
+    });
+}
+
+exports.put_tag = function(tag, callback) {
+    db = open_db(db_location);
+    db.serialize(() => {
+        db.run("BEGIN");
+        if (tag.id) {
+            db.run("UPDATE tag SET tag = ? where id = ?",[tag.tag, tag.id],err => {
+                console.log("Updated tag");
+            });
+        }
+        else {
+            db.run("INSERT INTO tag(tag) values(?)",[tag.tag],err => {
+                console.log("Inserted a new tag");
+                tag.id = this.lastID;
+            });
+        }
+        db.run("COMMIT");
     });
 }
