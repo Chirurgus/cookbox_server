@@ -1,6 +1,6 @@
 const sqlite3 = require('sqlite3').verbose();
 
-const db_location = "database/recipe_v4.db";
+const db_location = "database/recipe_v5.db";
 
 class Recipe {
     constructor(id,
@@ -46,7 +46,7 @@ class Tag {
 }
 
 function open_db(db_location) {
-    return new sqlite3.Database("database/recipe_v4.db", (err) => {
+    return new sqlite3.Database(db_location, (err) => {
         if (err)
             console.error(err.mesage);
         else
@@ -144,7 +144,7 @@ exports.get = function(id, callback) {
                            row.long_description,
                            row.target_quantity,
                            row.target_description,
-                           row.preperation_time,
+                           row.preparation_time,
                            row.source,
                            ingredient_list,
                            instruction_list,
@@ -175,7 +175,7 @@ exports.put = function(recipe, callback) {
         db.run("BEGIN");
 
         if (!recipe.id) {
-            db.run("INSERT INTO recipe(name,short_description,long_description,target_quantity,target_description,preperation_time,source) values(?,?,?,?,?,?,?)",
+            db.run("INSERT INTO recipe(name,short_description,long_description,target_quantity,target_description,preparation_time,source) values(?,?,?,?,?,?,?)",
                     [recipe.name,recipe.short_description,recipe.long_description,recipe.target_quantity,recipe.target_description,recipe.preparation_time,recipe.source],
                     (err) => {
                         console.log("Inserted new recipe");
@@ -184,7 +184,7 @@ exports.put = function(recipe, callback) {
             );
         }
         else {
-            db.run("UPDATE OR ROLLBACK recipe SET name=?,short_description=?,long_description=?,target_quantity=?,target_description=?,preperation_time=?,source=? WHERE id=?",
+            db.run("UPDATE OR ROLLBACK recipe SET name=?,short_description=?,long_description=?,target_quantity=?,target_description=?,preparation_time=?,source=? WHERE id=?",
                     [recipe.name,recipe.short_description,recipe.long_description,recipe.target_quantity,recipe.target_description,recipe.preparation_time,recipe.source,recipe.id],
                     (err) => { console.log("Updated recipe"); }
             );
@@ -280,5 +280,35 @@ exports.put_tag = function(tag, callback) {
             });
         }
         db.run("COMMIT");
+    });
+}
+
+exports.recent_recipes = function(time, callback) {
+    db = open_db(db_location);
+    db.all("SELECT id FROM recipe WHERE time_modified > ?", [time], (err,rows) => {
+        if (err) {
+            throw err;
+        }
+        var ret = [];
+        rows.forEach(row => {
+           ret.push(row.id); 
+        });
+        close_db(db);
+        callback(null, ret);
+    });
+}
+
+exports.recent_tags = function(time, callback) {
+    db = open_db(db_location);
+    db.all("SELECT id FROM tag WHERE time_modified > ?", [time], (err,rows) => {
+        if (err) {
+            throw err;
+        }
+        var ret = [];
+        rows.forEach(row => {
+           ret.push(row.id); 
+        });
+        close_db(db);
+        callback(null, ret);
     });
 }

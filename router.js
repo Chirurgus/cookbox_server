@@ -7,7 +7,37 @@ var router = express.Router();
 router.use(bodyParser.json());
 
 router.get('/:adr', function (req, res) {
-    if (req.params.adr == "ids") {
+    if (req.params.adr == "sync") {
+        if (!req.body.time) {
+            recipe_db.all_ids((err,recipes) => {
+                recipe_db.all_tags((err,tags) => {
+                    res.status(200).send(JSON.stringify( {"recipes": recipes, "tags": tags} ));
+                }); 
+            });
+            return;
+        }
+        var token = new Date(req.body.time);
+        var recipes = [];
+        var tags = [];
+        recipe_db.recent_recipes(token, (err,ids) => {
+            ids.forEach(id => {
+                recipe_db.get(id,(err,recipe) => {
+                    recipes.push(recipe);
+                });
+            });
+
+            recipe_db.recent_tags(token, (err,ids) => {
+                ids.forEach(id => {
+                    recipe_db.tag(id,(err,tag) => {
+                        tags.push(tag);
+                    });
+                });
+            });
+        });
+        
+        res.status(200).send(JSON.stringify( {"recipes": recipes, "tags": tags} ));;
+    }
+    else if (req.params.adr == "ids") {
         recipe_db.all_ids((err,ids) => {
             if (err) res.status(500);
             res.status(200).send(JSON.stringify(ids));
