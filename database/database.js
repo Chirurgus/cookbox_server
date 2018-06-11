@@ -1,6 +1,8 @@
 const sqlite3 = require('sqlite3').verbose();
 
-const db_location = "database/recipe_v5.db";
+const db_location = "database/recipe.db";
+const schema_db_location = "database/schema.db"
+const db_version = 5;
 
 class Recipe {
     constructor(id,
@@ -45,13 +47,49 @@ class Tag {
     }
 }
 
-function open_db(db_location) {
-    return new sqlite3.Database(db_location, (err) => {
+function upgrade_db(recipe_db, old_version) {
+    var schema_db = new sqlite3.Database(schema_db_location, (err) => {
         if (err)
             console.error(err.mesage);
         else
             console.log("Opened db");
     });
+    
+    if (old_version < 3) {
+        throw "Database too old";
+    }
+
+    recipe_db.serialize(() => {
+    schema_db.serialise(() => {
+        for (var v = 4; v <= 5; ++v) {
+            if (old_version <= v) {
+                schema_db.get("SELECT migration FROM schema WHERE version = ?",[v], (err,row) => {
+                    if (err) return;
+                    recipe_db.exec(row.migration);
+                });
+                ++old_version;
+            }   
+        }
+    });
+    });
+}
+
+function open_db(db_location) {
+    var db = new sqlite3.Database(db_location, sqlite3.OPEN_READWRITE, (err) => {
+        if (err)
+            console.error(err.mesage);
+        else
+            console.log("Opened db");
+    });
+    db.run("PRAGMA FOREIGN_KEYS=ON")
+    db.get("PRAGMA USER_VERSION",[], (err,res) => {
+        var version = res.USER_VERSION;
+        console.log(version);
+        if (version > db_version) {
+            upgrade_db(db, version, db_version);
+        }
+    });
+    return db;
 }
 
 function close_db(db) {
@@ -127,6 +165,7 @@ function read_tag_list(id, db) {
 
 exports.get = function(id, callback) {
     db = open_db(db_location);
+   
     let sql = 'SELECT * FROM recipe WHERE id = ?';
     let params = [id];
 

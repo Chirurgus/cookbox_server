@@ -1,0 +1,210 @@
+CREATE TABLE schema(
+	version integer primary key,
+	schema text not null,
+	migration text not null,
+	comment text null
+);
+
+INSERT INTO schema VALUES(3, "CREATE TABLE tag(                                     
+  id integer primary key,                             
+  tag text unique not null
+);                                                    
+CREATE TABLE tag_list(                                
+  tag_id integer not null references tag(id),         
+  recipe_id integer not null references recipe(id)    
+);                                                    
+CREATE TABLE instruction_list(                        
+  recipe_id integer not null references recipe(id),            
+  position integer not null,                          
+  instruction text not null default ""                           
+);                                                    
+CREATE TABLE comment_list(                            
+  recipe_id integer not null references recipe(id),   
+  comment text not null default ""
+);                                                    
+CREATE TABLE recipe(                                
+  id integer primary key,                             
+  name text not null default "",                      
+  short_description text not null default "",         
+  long_description text not null default "",          
+  target_quantity real not null default 1,                      
+  target_description text not null default "",
+  preperation_time real not null default 0,
+  source text not null default ""      
+);                                                    
+CREATE TABLE ingredient_list(
+  recipe_id integer not null references recipe(id),   
+  quantity real not null default 1,                             
+  description text not null default "",                          
+  other_recipe integer null references recipe(id)     
+);", "CREATE TABLE new_tag(                                     
+  id integer primary key,                             
+  tag text unique not null
+);
+INSERT INTO new_tag SELECT * FROM tag;
+
+CREATE TABLE new_instruction_list(                        
+  recipe_id integer not null references recipe(id),            
+  position integer not null,                          
+  instruction text not null default ""                           
+);
+INSERT INTO new_instruction_list select * from instruction_list;
+
+CREATE TABLE new_comment_list(                            
+  recipe_id integer not null references recipe(id),   
+  comment text not null default ""
+);
+INSERT INTO new_comment_list select * from comment_list;
+
+ALTER TABLE recipe ADD COLUMN preperation_time real not null default 0;
+
+CREATE TABLE new_ingredient_list(
+  recipe_id integer not null references recipe(id),   
+  quantity real not null default 1,                             
+  description text not null default "",                          
+  other_recipe integer null references recipe(id)     
+);
+INSERT INTO new_ingredient_list select * from ingredient_list;
+
+DROP TABLE tag;
+ALTER TABLE new_tag RENAME TO tag;
+DROP TABLE instruction_list;
+ALTER TABLE new_instruction_list RENAME TO instruction_list;
+DROP TABLE comment_list;
+ALTER TABLE new_comment_list RENAME TO comment_list;
+DROP TABLE ingredient_list;
+ALTER TABLE new_ingredient_list RENAME TO ingredient_list;", NULL);  
+
+INSERT INTO schema VALUES(4,"CREATE TABLE tag(                                     
+  id integer primary key,                             
+  tag text unique not null
+);                                                    
+CREATE TABLE tag_list(                                
+  tag_id integer not null references tag(id),         
+  recipe_id integer not null references recipe(id)    
+);                                                    
+CREATE TABLE instruction_list(                        
+  recipe_id integer not null references recipe(id),            
+  position integer not null,                          
+  instruction text not null default ""                           
+);                                                    
+CREATE TABLE comment_list(                            
+  recipe_id integer not null references recipe(id),   
+  comment text not null default ""
+);                                                    
+CREATE TABLE recipe(                                
+  id integer primary key,                             
+  name text not null default "",                      
+  short_description text not null default "",         
+  long_description text not null default "",          
+  target_quantity real not null default 1,                      
+  target_description text not null default "",
+  preperation_time real not null default 0,
+  source text not null default ""      
+);                                                    
+CREATE TABLE ingredient_list(
+  recipe_id integer not null references recipe(id),   
+  quantity real not null default 1,                             
+  description text not null default "",                          
+  other_recipe integer null references recipe(id)     
+);","CREATE TABLE new_tag(                                     
+  id integer primary key,                             
+  tag text unique not null
+);
+INSERT INTO new_tag SELECT * FROM tag;
+
+CREATE TABLE new_instruction_list(                        
+  recipe_id integer not null references recipe(id),            
+  position integer not null,                          
+  instruction text not null default ""                           
+);
+INSERT INTO new_instruction_list select * from instruction_list;
+
+CREATE TABLE new_comment_list(                            
+  recipe_id integer not null references recipe(id),   
+  comment text not null default ""
+);
+INSERT INTO new_comment_list select * from comment_list;
+
+ALTER TABLE recipe ADD COLUMN preperation_time real not null default 0;
+
+CREATE TABLE new_ingredient_list(
+  recipe_id integer not null references recipe(id),   
+  quantity real not null default 1,                             
+  description text not null default "",                          
+  other_recipe integer null references recipe(id)     
+);
+INSERT INTO new_ingredient_list select * from ingredient_list;
+
+DROP TABLE tag;
+ALTER TABLE new_tag RENAME TO tag;
+DROP TABLE instruction_list;
+ALTER TABLE new_instruction_list RENAME TO instruction_list;
+DROP TABLE comment_list;
+ALTER TABLE new_comment_list RENAME TO comment_list;
+DROP TABLE ingredient_list;
+ALTER TABLE new_ingredient_list RENAME TO ingredient_list;",NULL);
+      
+INSERT INTO schema VALUES(5,"CREATE TABLE tag(                                     
+  id integer primary key,                             
+  tag text unique not null
+);                                                    
+CREATE TABLE tag_list(                                
+  tag_id integer not null references tag(id),         
+  recipe_id integer not null references recipe(id)    
+);                                                    
+CREATE TABLE instruction_list(                        
+  recipe_id integer not null references recipe(id),            
+  position integer not null,                          
+  instruction text not null default ""                           
+);                                                    
+CREATE TABLE comment_list(                            
+  recipe_id integer not null references recipe(id),   
+  comment text not null default ""
+);                                                    
+CREATE TABLE recipe(                                
+  id integer primary key,                             
+  name text not null default "",                      
+  short_description text not null default "",         
+  long_description text not null default "",          
+  target_quantity real not null default 1,                      
+  target_description text not null default "",
+  preperation_time real not null default 0,
+  source text not null default ""      
+);                                                    
+CREATE TABLE ingredient_list(
+  recipe_id integer not null references recipe(id),   
+  quantity real not null default 1,                             
+  description text not null default "",                          
+  other_recipe integer null references recipe(id)     
+);","BEGIN TRANSACTION;
+
+CREATE TABLE new_recipe(
+  id integer primary key,                             
+  name text not null default "",                      
+  short_description text not null default "",         
+  long_description text not null default "",          
+  target_quantity real not null default 1,                      
+  target_description text not null default "",
+  preparation_time real not null default 0,
+  source text not null default "",
+  time_modified text not null default CURRENT_TIMESTAMP
+); 
+CREATE TABLE IF NOT EXISTS new_tag(id integer primary key,
+				   tag text unique not null,
+				   time_modified text not null default CURRENT_TIMESTAMP
+				   );
+
+INSERT into new_recipe(id,name,short_description,long_description,target_quantity,target_description,preparation_time,source)
+	SELECT id,name,short_description,long_description,target_quantity,target_description,preperation_time AS preparation_time,source FROM recipe;
+INSERT INTO new_tag(id,tag) SELECT * FROM tag;
+
+DROP TABLE tag;
+DROP TABLE recipe;
+
+ALTER TABLE new_recipe RENAME TO recipe;
+ALTER TABLE new_tag RENAME TO tag;
+
+COMMIT;","add time_modified columns, and correct preperation time typo");   
+
+INSERT INTO schema VALUES(ver,"","",NULL);       
