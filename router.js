@@ -21,11 +21,10 @@ router.get('/:adr', function (req, res) {
         var tags = [];
         recipe_db.recent_recipes(token, (err,ids) => {
             ids.forEach(id => {
-                recipe_db.get(id,(err,recipe) => {
-                    recipes.push(recipe);
-                });
+                recipe_db.get(id)
+                    .then((recipe) => { recipes.push(recipe); })
+                    .catch((err) => res.send(500).send("Could not read recipes"));
             });
-
             recipe_db.recent_tags(token, (err,ids) => {
                 ids.forEach(id => {
                     recipe_db.tag(id,(err,tag) => {
@@ -44,10 +43,9 @@ router.get('/:adr', function (req, res) {
         });
     }
     else {
-        recipe_db.get(req.params.adr, (err,recipe) => {
-            if (err) res.status(500);
-            res.status(200).send(JSON.stringify(recipe));
-        });
+        recipe_db.get(req.params.adr)
+            .then((recipe) => { res.status(200).send(JSON.stringify(recipe)); })
+            .catch((err) => { res.status(500); });
     }
 });
 router.get('/tag/:adr', function (req, res) {
@@ -75,6 +73,25 @@ router.put('/tag', function (req, res) {
         if (err) res.status(500);
         res.status(200).send(JSON.stringify(tag.id));
     });
+});
+
+
+
+async function test(code) {
+    if (code == "test") {
+        return 123;
+    }
+    else {
+        throw new Error("This is an error");
+    }
+}
+
+async function f(req,res) {
+    await test(req.params.test).catch(err => {res.status(500).send(err.message);});
+}
+
+router.get('/test/:test', function (req,res) {
+    f(req,res);
 });
 
 module.exports = router;

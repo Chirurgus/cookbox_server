@@ -48,48 +48,60 @@ class Tag {
 }
 
 function upgrade_db(recipe_db, old_version) {
-    var schema_db = new sqlite3.Database(schema_db_location, (err) => {
-        if (err)
-            console.error(err.mesage);
-        else
-            console.log("Opened db");
-    });
-    
-    if (old_version < 3) {
-        throw "Database too old";
-    }
+    return new Promise((resolve, reject) => {
+        var schema_db = new sqlite3.Database(schema_db_location, (err) => {
+            if (err)
+                reject(err.message);
+        });
+        
+        if (old_version < 3) {
+            reject(new Error("Cannot update db schema: database too old"));
+        }
 
-    recipe_db.serialize(() => {
-    schema_db.serialise(() => {
-        for (var v = 4; v <= 5; ++v) {
+        recipe_db.serialize(() => {
+        schema_db.serialise(() => {
+
+        for (var v = 4; v <= db_version; ++v) {
             if (old_version <= v) {
                 schema_db.get("SELECT migration FROM schema WHERE version = ?",[v], (err,row) => {
-                    if (err) return;
-                    recipe_db.exec(row.migration);
+                    if (err) reject(new Error("Cannot read migration sql for version " + v + ":" + err.message));
+                    recipe_db.exec(row.migration, err => {
+                        reject(new Error("Cannot migrate databse: " + err.message));
+                    });
                 });
                 ++old_version;
             }   
         }
-    });
+
+        });
+        });
     });
 }
 
 function open_db(db_location) {
-    var db = new sqlite3.Database(db_location, sqlite3.OPEN_READWRITE, (err) => {
-        if (err)
-            console.error(err.mesage);
-        else
-            console.log("Opened db");
+    return new Promise ((resolve,reject) => {
+        var db = new sqlite3.Database(db_location, sqlite3.OPEN_READWRITE, (err) => {
+            if (err)
+                reject(err);
+            else
+                console.log("Opened db");
+        });
+        db.get("PRAGMA USER_VERSION",[], async (err,res) => {
+            var version = res.USER_VERSION;
+            if (version < db_version) {
+                try {
+                    await upgrade_db(db, version, db_version);
+                    db.run("PRAGMA FOREIGN_KEYS=ON", (err) => {
+                        reject(err);
+                    });
+                    resolve(db);
+                }
+                catch (err) {
+                    reject(err);
+                }
+            }
+        });
     });
-    db.run("PRAGMA FOREIGN_KEYS=ON")
-    db.get("PRAGMA USER_VERSION",[], (err,res) => {
-        var version = res.USER_VERSION;
-        console.log(version);
-        if (version > db_version) {
-            upgrade_db(db, version, db_version);
-        }
-    });
-    return db;
 }
 
 function close_db(db) {
@@ -163,36 +175,42 @@ function read_tag_list(id, db) {
     return ret;
 }
 
-exports.get = function(id, callback) {
-    db = open_db(db_location);
-   
-    let sql = 'SELECT * FROM recipe WHERE id = ?';
-    let params = [id];
-
-    var ingredient_list = read_ingredient_list(id, db);
-    var instruction_list = read_instruction_list(id, db);
-    var comment_list = read_comment_list(id,db);
-    var tag_list = read_tag_list(id,db);
-    db.get(sql, params, (err, row) => {
-        if (err) {
+exports.get = async function(id, callback) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            db = await open_db(db_location);
+        }
+        catch (err) {
             throw err;
         }
-        var ret = new Recipe(row.id,
-                           row.name,
-                           row.short_description,
-                           row.long_description,
-                           row.target_quantity,
-                           row.target_description,
-                           row.preparation_time,
-                           row.source,
-                           ingredient_list,
-                           instruction_list,
-                           comment_list,
-                           tag_list);
-        close_db(db);
-        callback(null, JSON.stringify(ret));
+    
+        let sql = 'SELECT * FROM recipe WHERE id = ?';
+        let params = [id];
+
+        var ingredient_list = read_ingredient_list(id, db);
+        var instruction_list = read_instruction_list(id, db);
+        var comment_list = read_comment_list(id,db);
+        var tag_list = read_tag_list(id,db);
+        db.get(sql, params, (err, row) => {
+            if (err) {
+                throw err;
+            }
+            var ret = new Recipe(row.id,
+                            row.name,
+                            row.short_description,
+                            row.long_description,
+                            row.target_quantity,
+                            row.target_description,
+                            row.preparation_time,
+                            row.source,
+                            ingredient_list,
+                            instruction_list,
+                            comment_list,
+                            tag_list);
+            close_db(db);
+            resolve(ret);
+        });
     });
-   
 }
 
 exports.put = function(recipe, callback) {
