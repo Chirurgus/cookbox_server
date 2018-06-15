@@ -228,70 +228,74 @@ exports.get = async function(id) {
     });
 }
 
-exports.put = function(recipe, callback) {
-    db = open_db(db_location);
-    //Check tag is present
-    var tag_ok = db.get("SELECT * from tag WHERE id = ?", [recipe.id], (err,row) => {
-        if (err) {
-            return console.error(err.messag);
+exports.put = function(recipe) {
+    return new Promise((resolve,reject) => { 
+        db = open_db(db_location);
+        //Check tag is present
+        var tag_ok = db.get("SELECT * from tag WHERE id = ?", [recipe.id], (err,row) => {
+            if (err) reject(err);
+            if (!row) {
+                reject(new Error("No tag with id: " + recipe.id))
+            }
+        });
+
+        if (!tag_ok) {
+            reject(new Error("Tag is not present."));
+            return; 
         }
-        row ? true : false ;
+
+        db.serialize(() => {
+            db.run("BEGIN");
+
+            if (!recipe.id) {
+                db.run("INSERT INTO recipe(name,short_description,long_description,target_quantity,target_description,preparation_time,source) values(?,?,?,?,?,?,?)",
+                        [recipe.name,recipe.short_description,recipe.long_description,recipe.target_quantity,recipe.target_description,recipe.preparation_time,recipe.source],
+                        (err) => {
+                            if (err) reject(err);
+                            recipe.id = this.lastID;
+                        }
+                );
+            }
+            else {
+                db.run("UPDATE OR ROLLBACK recipe SET name=?,short_description=?,long_description=?,target_quantity=?,target_description=?,preparation_time=?,source=? WHERE id=?",
+                        [recipe.name,recipe.short_description,recipe.long_description,recipe.target_quantity,recipe.target_description,recipe.preparation_time,recipe.source,recipe.id],
+                        (err) => {
+                            if (err) reject(err);
+                        }
+                );
+            }
+
+            db.run('DELETE FROM ingredient_list WHERE recipe_id = ?', [recipe.id]);
+            recipe.ingredient_list.forEach(ing => {
+                db.run("INSERT INTO ingredient_list(recipe_id,quantity,description,other_recipe) values(?,?,?,?)",
+                    [recipe.id, ing.quantity, ing.description,ing.other_recipe]);
+            });
+
+            db.run('DELETE FROM instruction_list WHERE recipe_id = ?', [recipe.id]);
+            for (var i = 0; i < recipe.instruction_list.length; ++i) {
+                db.run("INSERT INTO instruction_list(recipe_id,position,instruction) values(?,?,?)",
+                        [recipe.id, i, recipe.instruction_list[i]]);
+            }
+
+            db.run('DELETE FROM comment_list WHERE recipe_id = ?', [recipe.id]);
+            recipe.comment_list.forEach(cmnt => {
+                db.run("INSERT INTO comment_list(recipe_id,comment) values(?,?)",
+                        [recipe.id, cmnt]);
+            });
+
+            db.run('DELETE FROM tag_list WHERE recipe_id = ?', [recipe.id]);
+            recipe.comment_list.forEach(tag => {
+                db.run("INSERT INTO tag_list(recipe_id,tag_id) values(?,?)",
+                        [recipe.id, tag]);
+            });
+
+            db.run("COMMIT");
+
+            close_db(db);
+        });
+
+        resolve(recipe);
     });
-
-    if (!tag_ok) {
-        callback("Tag is not present.", recipe);
-        return;
-    }
-
-    db.serialize(() => {
-        db.run("BEGIN");
-
-        if (!recipe.id) {
-            db.run("INSERT INTO recipe(name,short_description,long_description,target_quantity,target_description,preparation_time,source) values(?,?,?,?,?,?,?)",
-                    [recipe.name,recipe.short_description,recipe.long_description,recipe.target_quantity,recipe.target_description,recipe.preparation_time,recipe.source],
-                    (err) => {
-                        console.log("Inserted new recipe");
-                        recipe.id = this.lastID;
-                    }
-            );
-        }
-        else {
-            db.run("UPDATE OR ROLLBACK recipe SET name=?,short_description=?,long_description=?,target_quantity=?,target_description=?,preparation_time=?,source=? WHERE id=?",
-                    [recipe.name,recipe.short_description,recipe.long_description,recipe.target_quantity,recipe.target_description,recipe.preparation_time,recipe.source,recipe.id],
-                    (err) => { console.log("Updated recipe"); }
-            );
-        }
-
-        db.run('DELETE FROM ingredient_list WHERE recipe_id = ?', [recipe.id]);
-        recipe.ingredient_list.forEach(ing => {
-            db.run("INSERT INTO ingredient_list(recipe_id,quantity,description,other_recipe) values(?,?,?,?)",
-                   [recipe.id, ing.quantity, ing.description,ing.other_recipe]);
-        });
-
-        db.run('DELETE FROM instruction_list WHERE recipe_id = ?', [recipe.id]);
-        for (var i = 0; i < recipe.instruction_list.length; ++i) {
-            db.run("INSERT INTO instruction_list(recipe_id,position,instruction) values(?,?,?)",
-                    [recipe.id, i, recipe.instruction_list[i]]);
-        }
-
-        db.run('DELETE FROM comment_list WHERE recipe_id = ?', [recipe.id]);
-        recipe.comment_list.forEach(cmnt => {
-            db.run("INSERT INTO comment_list(recipe_id,comment) values(?,?)",
-                    [recipe.id, cmnt]);
-        });
-
-        db.run('DELETE FROM tag_list WHERE recipe_id = ?', [recipe.id]);
-        recipe.comment_list.forEach(tag => {
-            db.run("INSERT INTO tag_list(recipe_id,tag_id) values(?,?)",
-                    [recipe.id, tag]);
-        });
-
-        db.run("COMMIT");
-
-        close_db(db);
-    });
-
-    callback(null, recipe)
 }
 
 exports.all_ids = function(callback) {

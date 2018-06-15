@@ -63,10 +63,9 @@ router.get('/tag/:adr', function (req, res) {
     }
 });
 router.put('', function (req, res) {
-    recipe_db.put(req.body, (err,recipe) => {
-        if (err) res.status(500);
-        res.status(200).send(JSON.stringify(recipe.id));
-    });
+    recipe_db.put(req.body)
+        .then((recipe) => { res.status(200).send(JSON.stringify(recipe.id)); })
+        .catch((err) => { res.status(500).send(err.message); });
 });
 router.put('/tag', function (req, res) {
     recipe_db.put(req.body, (err,tag) => {
@@ -77,13 +76,8 @@ router.put('/tag', function (req, res) {
 
 
 
-async function test(code) {
-    if (code == "test") {
-        return 123;
-    }
-    else {
-        throw new Error("This is an error");
-    }
+async function test(callback) {
+    callback();
 }
 
 async function f(req,res) {
@@ -91,7 +85,13 @@ async function f(req,res) {
 }
 
 router.get('/test/:test', function (req,res) {
-    f(req,res);
+    var b = test(() => { return false; });
+    if (b) {
+        res.status(500).send("True");
+    }
+    else {
+        res.status(500).send("False");
+    }
 });
 
 module.exports = router;
