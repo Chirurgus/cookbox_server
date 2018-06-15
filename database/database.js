@@ -81,25 +81,25 @@ function upgrade_db(recipe_db, old_version) {
 function open_db(db_location) {
     return new Promise ((resolve,reject) => {
         var db = new sqlite3.Database(db_location, sqlite3.OPEN_READWRITE, (err) => {
-            if (err)
-                reject(err);
-            else
-                console.log("Opened db");
+            if (err) reject(err);
+            else console.log("Opened db");
         });
         db.get("PRAGMA USER_VERSION",[], async (err,res) => {
+            if (err) reject(err);
+
             var version = res.USER_VERSION;
             if (version < db_version) {
                 try {
                     await upgrade_db(db, version, db_version);
-                    db.run("PRAGMA FOREIGN_KEYS=ON", (err) => {
-                        reject(err);
-                    });
-                    resolve(db);
                 }
                 catch (err) {
                     reject(err);
                 }
             }
+            db.run("PRAGMA FOREIGN_KEYS=ON", (err) => {
+                reject(err);
+            });
+            resolve(db);
         });
     });
 }
@@ -109,107 +109,122 @@ function close_db(db) {
         if (err) {
             return console.error(err.message);
         }
-        console.log('Close the database connection.');
+        console.log("Database connection closed.");
     });
 }
 
-function read_ingredient_list(id, db) {
-    let sql = 'SELECT * FROM ingredient_list WHERE recipe_id = ?';
-    let params = [id];
+async function read_ingredient_list(id, db) {
+    return new Promise( (resolve, reject) => {
+        let sql = 'SELECT quantity,description,other_recipe FROM ingredient_list WHERE recipe_id = ?';
+        let params = [id];
 
-    var ret = [];
-    db.all(sql, params, (err, rows) => {
-        if (err) {
-            throw err;
-        }
-        rows.forEach(row => {
-           ret.push(new Ingredient(row.quantity, row.description, row.other_recipe)); 
+        var ret = [];
+        db.all(sql, params, (err, rows) => {
+            if (err) {
+                throw reject(err);
+            }
+            rows.forEach(row => {
+                ret.push( new Ingredient(row.quantity, row.description, row.other_recipe)); 
+            });
+
+            resolve(ret);
         });
     });
-    return ret;
 }
-function read_instruction_list(id, db) {
-    let sql = 'SELECT * FROM instruction_list WHERE recipe_id = ?';
-    let params = [id];
 
-    var ret = [];
-    db.all(sql, params, (err, rows) => {
-        if (err) {
-            throw err;
-        }
-        rows.forEach(row => {
-           ret.push(row.instruction); 
+async function read_instruction_list(id, db) {
+    return new Promise ((resolve,reject) => {
+        let sql = 'SELECT instruction FROM instruction_list WHERE recipe_id = ?';
+        let params = [id];
+
+        var ret = [];
+        db.all(sql, params, (err, rows) => {
+            if (err) {
+                reject(err);
+            }
+            rows.forEach(row => {
+                ret.push(row.instruction); 
+            });
+
+            resolve(ret);
         });
     });
-    return ret;
 }
-function read_comment_list(id, db) {
-    let sql = 'SELECT * FROM comment_list WHERE recipe_id = ?';
-    let params = [id];
 
-    var ret = [];
-    db.all(sql, params, (err, rows) => {
-        if (err) {
-            throw err;
-        }
-        rows.forEach(row => {
-           ret.push(row.comment); 
+async function read_comment_list(id, db) {
+    return new Promise ((resolve,reject) => {
+        let sql = 'SELECT comment FROM comment_list WHERE recipe_id = ?';
+        let params = [id];
+
+        var ret = [];
+        db.all(sql, params, (err, rows) => {
+            if (err) {
+                reject(err);
+            }
+            rows.forEach(row => {
+                ret.push(row.comment); 
+            });
+
+            resolve(ret);
         });
     });
-    return ret;
 }
 
 function read_tag_list(id, db) {
-    let sql = 'SELECT * FROM tag_list WHERE recipe_id = ?';
-    let params = [id];
+    return new Promise((resolve,reject)  => {
+        let sql = 'SELECT * FROM tag_list WHERE recipe_id = ?';
+        let params = [id];
 
-    var ret = [];
-    db.all(sql, params, (err, rows) => {
-        if (err) {
-            throw err;
-        }
-        rows.forEach(row => {
-           ret.push(row.tag_id); 
+        var ret = [];
+        db.all(sql, params, (err, rows) => {
+            if (err) {
+                reject(err);
+            }
+            rows.forEach(row => {
+                ret.push(row.tag_id); 
+            });
+
+            resolve(ret);
         });
     });
-    return ret;
 }
 
-exports.get = async function(id, callback) {
+exports.get = async function(id) {
     return new Promise(async (resolve, reject) => {
         try {
             db = await open_db(db_location);
+        
+            let sql = 'SELECT * FROM recipe WHERE id = ?';
+            let params = [id];
+
+            var ingredient_list = await read_ingredient_list(id, db);
+            var instruction_list = await read_instruction_list(id, db);
+            var comment_list = await read_comment_list(id,db);
+            var tag_list = await read_tag_list(id,db);
+
+            db.get(sql, params, (err, row) => {
+                if (err) {
+                    reject(err);
+                }
+                var ret = new Recipe(row.id,
+                                row.name,
+                                row.short_description,
+                                row.long_description,
+                                row.target_quantity,
+                                row.target_description,
+                                row.preparation_time,
+                                row.source,
+                                ingredient_list,
+                                instruction_list,
+                                comment_list,
+                                tag_list);
+                close_db(db);
+                resolve(ret);
+            });
         }
         catch (err) {
-            throw err;
+            reject(err);
         }
-    
-        let sql = 'SELECT * FROM recipe WHERE id = ?';
-        let params = [id];
-
-        var ingredient_list = read_ingredient_list(id, db);
-        var instruction_list = read_instruction_list(id, db);
-        var comment_list = read_comment_list(id,db);
-        var tag_list = read_tag_list(id,db);
-        db.get(sql, params, (err, row) => {
-            if (err) {
-                throw err;
-            }
-            var ret = new Recipe(row.id,
-                            row.name,
-                            row.short_description,
-                            row.long_description,
-                            row.target_quantity,
-                            row.target_description,
-                            row.preparation_time,
-                            row.source,
-                            ingredient_list,
-                            instruction_list,
-                            comment_list,
-                            tag_list);
-            close_db(db);
-            resolve(ret);
-        });
     });
 }
 
