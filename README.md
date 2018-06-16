@@ -19,7 +19,7 @@ nodejs cookbox.js
 # API
 
 GET  
-/recipes
+/recipes  
 --------/:id        GET recipe with id :id {id:...,name:...,....}  
 --------/ids        GET a list of all recipe ids => {ids:[...]}  
 --------/sync       GET a list of all recipe ids that were updated since the time in sync-token => {recipes:[...], tags:[...]}  
