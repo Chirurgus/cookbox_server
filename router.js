@@ -28,7 +28,7 @@ router.get('/:adr', function (req, res) {
             recipe_ids = values[0],
             tag_ids = values[1]
 
-            res.status(200).send(JSON.stringify( {"recipes": recipe_ids, "tags": tag_ids} )); 
+            res.status(200).send(JSON.stringify( {"recipe_ids": recipe_ids, "tag_ids": tag_ids} )); 
         }).catch((err) => { 
             res.status(500).send(err.message); 
         });
@@ -36,7 +36,7 @@ router.get('/:adr', function (req, res) {
     }
     else if (req.params.adr == "ids") {
         recipe_db.all_ids()
-            .then((ids) => res.status(200).send(JSON.stringify(ids)) )
+            .then((ids) => res.status(200).send( {"ids": ids} )) 
             .catch((err) => res.status(500).send(err.message) );
     }
     else {
@@ -48,7 +48,7 @@ router.get('/:adr', function (req, res) {
 router.get('/tag/:adr', function (req, res) {
     if (req.params.adr == "ids") {
         recipe_db.all_tags()
-            .then(() => res.status(200).send(JSON.stringify(ids)) )
+            .then(() => res.status(200).send( {"ids": ids } ) )
             .catch((err) => res.status(err.message) );
     }
     else {

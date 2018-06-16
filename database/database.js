@@ -72,15 +72,17 @@ async function upgrade_db(recipe_db, old_version) {
                 ++old_version;
             }   
         }
+        
+        resolve();
 
         });
         });
     });
 }
 
-async function open_db(db_location) {
+async function open_db(db_location, mode) {
     return new Promise ((resolve,reject) => {
-        var db = new sqlite3.Database(db_location, sqlite3.OPEN_READWRITE, (err) => {
+        var db = new sqlite3.Database(db_location, mode, (err) => {
             if (err) reject(err);
             else console.log("Opened db");
         });
@@ -192,7 +194,7 @@ async function read_tag_list(id, db) {
 exports.get = async function(id) {
     return new Promise(async (resolve, reject) => {
         try {
-            db = await open_db(db_location);
+            db = await open_db(db_location,sqlite3.OPEN_READWRITE);
         
             let sql = 'SELECT * FROM recipe WHERE id = ?';
             let params = [id];
@@ -230,7 +232,7 @@ exports.get = async function(id) {
 
 exports.put = async function(recipe) {
     return new Promise((resolve,reject) => { 
-        db = open_db(db_location);
+        db = open_db(db_location,sqlite3.OPEN_READONLY);
         //Check tag is present
         var tag_ok = db.get("SELECT * from tag WHERE id = ?", [recipe.id], (err,row) => {
             if (err) reject(err);
@@ -301,7 +303,7 @@ exports.put = async function(recipe) {
 exports.all_ids = async function() {
     return new Promise( async (resolve,reject) => {
         try {
-            db = await open_db(db_location);
+            db = await open_db(db_location, sqlite3.OPEN_READONLY);
         }
         catch (err) {
             reject(err);
@@ -325,7 +327,7 @@ exports.all_ids = async function() {
 exports.all_tags = async function() {
     return new Promise(async (resolve,reject) => {
         try {
-            db = await open_db(db_location);
+            db = await open_db(db_location, sqlite3.OPEN_READONLY);
         }
         catch(err) {
             reject(err);
@@ -349,7 +351,7 @@ exports.all_tags = async function() {
 exports.tag = async function(id) {
     return new Promise( async (resolve,reject) => {
         try {
-            db = await open_db(db_location);
+            db = await open_db(db_location, sqlite3.OPEN_READONLY);
         }
         catch (err) {
             reject(err);
@@ -370,7 +372,7 @@ exports.tag = async function(id) {
 exports.put_tag = async function(tag) {
     return new Promise( async (resolve,reject) => {
         try {
-            db = await open_db(db_location);
+            db = await open_db(db_location,sqlite3.OPEN_READWRITE);
         }
         catch(err) {
             reject(err);
@@ -398,7 +400,7 @@ exports.put_tag = async function(tag) {
 exports.recent_recipes = async function(time) {
     return new Promise( async (resolve,reject) => {
         try {
-            db = await open_db(db_location);
+            db = await open_db(db_location,sqlite3.OPEN_READONLY);
         }
         catch (err) {
             reject(err);
@@ -423,7 +425,7 @@ exports.recent_recipes = async function(time) {
 exports.recent_tags = async function(time) {
     return new Promise( async (resolve,reject) => {
         try {
-        db = await open_db(db_location);
+        db = await open_db(db_location,sqlite3.OPEN_READONLY);
         }
         catch (err) {
             reject(err);
