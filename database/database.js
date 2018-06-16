@@ -52,10 +52,12 @@ async function upgrade_db(recipe_db, old_version) {
         var schema_db = new sqlite3.Database(schema_db_location, (err) => {
             if (err)
                 reject(err.message);
+                return;
         });
         
         if (old_version < 3) {
             reject(new Error("Cannot update db schema: database too old"));
+            return;
         }
 
         recipe_db.serialize(() => {
@@ -64,9 +66,13 @@ async function upgrade_db(recipe_db, old_version) {
         for (var v = 4; v <= db_version; ++v) {
             if (old_version <= v) {
                 schema_db.get("SELECT migration FROM schema WHERE version = ?",[v], (err,row) => {
-                    if (err) reject(new Error("Cannot read migration sql for version " + v + ":" + err.message));
+                    if (err) {
+                        reject(new Error("Cannot read migration sql for version " + v + ":" + err.message));
+                        return;
+                    }
                     recipe_db.exec(row.migration, err => {
                         reject(new Error("Cannot migrate databse: " + err.message));
+                        return;
                     });
                 });
                 ++old_version;
@@ -87,7 +93,7 @@ async function open_db(db_location, mode) {
             else console.log("Opened db");
         });
         db.get("PRAGMA USER_VERSION",[], async (err,res) => {
-            if (err) reject(err);
+            if (err) reject(err); return;
 
             var version = res.USER_VERSION;
             if (version < db_version) {
@@ -96,6 +102,7 @@ async function open_db(db_location, mode) {
                 }
                 catch (err) {
                     reject(err);
+                    return;
                 }
             }
             db.run("PRAGMA FOREIGN_KEYS=ON", (err) => {
@@ -123,7 +130,8 @@ async function read_ingredient_list(id, db) {
         var ret = [];
         db.all(sql, params, (err, rows) => {
             if (err) {
-                throw reject(err);
+                reject(err);
+                return;
             }
             rows.forEach(row => {
                 ret.push( new Ingredient(row.quantity, row.description, row.other_recipe)); 
@@ -143,6 +151,7 @@ async function read_instruction_list(id, db) {
         db.all(sql, params, (err, rows) => {
             if (err) {
                 reject(err);
+                return;
             }
             rows.forEach(row => {
                 ret.push(row.instruction); 
@@ -162,6 +171,7 @@ async function read_comment_list(id, db) {
         db.all(sql, params, (err, rows) => {
             if (err) {
                 reject(err);
+                return;
             }
             rows.forEach(row => {
                 ret.push(row.comment); 
@@ -181,6 +191,7 @@ async function read_tag_list(id, db) {
         db.all(sql, params, (err, rows) => {
             if (err) {
                 reject(err);
+                return;
             }
             rows.forEach(row => {
                 ret.push(row.tag_id); 
@@ -207,6 +218,11 @@ exports.get = async function(id) {
             db.get(sql, params, (err, row) => {
                 if (err) {
                     reject(err);
+                    return;
+                }
+                if (row == null) {
+                    reject(new Error("Database does not conntain recipe with id " + id + "."))
+                    return;
                 }
                 var ret = new Recipe(row.id,
                                 row.name,
@@ -360,6 +376,10 @@ exports.tag = async function(id) {
         db.get("SELECT id,tag FROM tag WHERE id = ?", [id], (err, row) => {
             if (err) {
                 reject(err);
+                return;
+            }
+            if (row == null) {
+                reject(new Error("There are no tags with id " + id + "."));
                 return;
             }
             close_db(db);
