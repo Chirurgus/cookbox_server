@@ -22,8 +22,8 @@ GET
 /recipes  
 --------/:id        GET recipe with id :id {id:...,name:...,....}  
 --------/ids        GET a list of all recipe ids => {ids:[...]}  
---------/sync       GET a list of all recipe ids that were updated since the time in sync-token => {recipes:[...], tags:[...]}  
---------/tag/:id    GET the tag with the id :id => {id:...}  
+--------/sync       GET a list of all recipe ids that were updated since the time in sync-token => {recipe_ids:[...], tag_ids:[...]}  
+--------/tag/:id    GET the tag with the id :id => {id:...,tag:...}  
 --------/tag/ids    GET all tag ids => {ids:[...]}  
 
 PUT  
