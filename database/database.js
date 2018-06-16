@@ -47,7 +47,7 @@ class Tag {
     }
 }
 
-function upgrade_db(recipe_db, old_version) {
+async function upgrade_db(recipe_db, old_version) {
     return new Promise((resolve, reject) => {
         var schema_db = new sqlite3.Database(schema_db_location, (err) => {
             if (err)
@@ -78,7 +78,7 @@ function upgrade_db(recipe_db, old_version) {
     });
 }
 
-function open_db(db_location) {
+async function open_db(db_location) {
     return new Promise ((resolve,reject) => {
         var db = new sqlite3.Database(db_location, sqlite3.OPEN_READWRITE, (err) => {
             if (err) reject(err);
@@ -170,7 +170,7 @@ async function read_comment_list(id, db) {
     });
 }
 
-function read_tag_list(id, db) {
+async function read_tag_list(id, db) {
     return new Promise((resolve,reject)  => {
         let sql = 'SELECT * FROM tag_list WHERE recipe_id = ?';
         let params = [id];
@@ -228,7 +228,7 @@ exports.get = async function(id) {
     });
 }
 
-exports.put = function(recipe) {
+exports.put = async function(recipe) {
     return new Promise((resolve,reject) => { 
         db = open_db(db_location);
         //Check tag is present
@@ -298,93 +298,149 @@ exports.put = function(recipe) {
     });
 }
 
-exports.all_ids = function(callback) {
-    db = open_db(db_location);
-    db.all("SELECT id FROM recipe", [], (err, rows) => {
-        if (err) {
-            throw err;
+exports.all_ids = async function() {
+    return new Promise( async (resolve,reject) => {
+        try {
+            db = await open_db(db_location);
         }
-        ids = [];
-        rows.forEach(row => {
-           ids.push(row.id); 
-        });
-        close_db(db);
-        callback(null, ids);
-    });
-}
-
-exports.all_tags = function(callback) {
-    db = open_db(db_location);
-    db.all("SELECT id FROM tag", [], (err, rows) => {
-        if (err) {
-            throw err;
+        catch (err) {
+            reject(err);
+            return;
         }
-        ids = [];
-        rows.forEach(row => {
-           ids.push(row.id); 
-        });
-        close_db(db);
-        callback(null, ids);
-    });
-}
-
-exports.tag = function(id, callback) {
-    db = open_db(db_location);
-    db.get("SELECT id,tag FROM tag WHERE id = ?", [id], (err, row) => {
-        if (err) {
-            throw err;
-        }
-        close_db(db);
-        tag = new Tag(row.id, row.tag);
-        callback(null, tag);
-    });
-}
-
-exports.put_tag = function(tag, callback) {
-    db = open_db(db_location);
-    db.serialize(() => {
-        db.run("BEGIN");
-        if (tag.id) {
-            db.run("UPDATE tag SET tag = ? where id = ?",[tag.tag, tag.id],err => {
-                console.log("Updated tag");
+        db.all("SELECT id FROM recipe", [], (err, rows) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            ids = [];
+            rows.forEach(row => {
+                ids.push(row.id); 
             });
+            resolve(ids);
+            close_db(db);
+        });
+    });
+}
+
+exports.all_tags = async function() {
+    return new Promise(async (resolve,reject) => {
+        try {
+            db = await open_db(db_location);
         }
-        else {
-            db.run("INSERT INTO tag(tag) values(?)",[tag.tag],err => {
-                console.log("Inserted a new tag");
-                tag.id = this.lastID;
+        catch(err) {
+            reject(err);
+            return;
+        }
+        db.all("SELECT id FROM tag", [], (err, rows) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            ids = [];
+            rows.forEach(row => {
+                ids.push(row.id); 
             });
-        }
-        db.run("COMMIT");
+            resolve(ids);
+            close_db(db);
+        });
     });
 }
 
-exports.recent_recipes = function(time, callback) {
-    db = open_db(db_location);
-    db.all("SELECT id FROM recipe WHERE time_modified > ?", [time], (err,rows) => {
-        if (err) {
-            throw err;
+exports.tag = async function(id) {
+    return new Promise( async (resolve,reject) => {
+        try {
+            db = await open_db(db_location);
         }
-        var ret = [];
-        rows.forEach(row => {
-           ret.push(row.id); 
+        catch (err) {
+            reject(err);
+            return;
+        }
+        db.get("SELECT id,tag FROM tag WHERE id = ?", [id], (err, row) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            close_db(db);
+            tag = new Tag(row.id, row.tag);
+            resolve(tag);
         });
-        close_db(db);
-        callback(null, ret);
     });
 }
 
-exports.recent_tags = function(time, callback) {
-    db = open_db(db_location);
-    db.all("SELECT id FROM tag WHERE time_modified > ?", [time], (err,rows) => {
-        if (err) {
-            throw err;
+exports.put_tag = async function(tag) {
+    return new Promise( async (resolve,reject) => {
+        try {
+            db = await open_db(db_location);
         }
-        var ret = [];
-        rows.forEach(row => {
-           ret.push(row.id); 
+        catch(err) {
+            reject(err);
+            return;
+        }
+        db.serialize(() => {
+            db.run("BEGIN");
+            if (tag.id) {
+                db.run("UPDATE tag SET tag = ? where id = ?",[tag.tag, tag.id],err => {
+                    if (err) reject(err);
+                });
+            }
+            else {
+                db.run("INSERT INTO tag(tag) values(?)",[tag.tag],err => {
+                    if (err) reject(err);
+                    tag.id = this.lastID;
+                    resolve(tag);
+                });
+            }
+            db.run("COMMIT");
         });
-        close_db(db);
-        callback(null, ret);
+    });
+}
+
+exports.recent_recipes = async function(time) {
+    return new Promise( async (resolve,reject) => {
+        try {
+            db = await open_db(db_location);
+        }
+        catch (err) {
+            reject(err);
+            return;
+        }
+        db.all("SELECT id FROM recipe WHERE time_modified > ?", [time], (err,rows) => {
+            if (err) {
+                reject(err); 
+                return;
+            }
+
+            var ret = [];
+            rows.forEach(row => {
+                ret.push(row.id); 
+            });
+            resolve(ret);
+            close_db(db);
+        });
+    });
+}
+
+exports.recent_tags = async function(time) {
+    return new Promise( async (resolve,reject) => {
+        try {
+        db = await open_db(db_location);
+        }
+        catch (err) {
+            reject(err);
+            return;
+        }
+        db.all("SELECT id FROM tag WHERE time_modified > ?", [time], (err,rows) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+
+            var ret = [];
+            rows.forEach(row => {
+                ret.push(row.id); 
+            });
+            resolve(ret);
+            close_db(db);
+        });
     });
 }

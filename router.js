@@ -8,70 +8,64 @@ router.use(bodyParser.json());
 
 router.get('/:adr', function (req, res) {
     if (req.params.adr == "sync") {
-        if (!req.body.time) {
-            recipe_db.all_ids((err,recipes) => {
-                recipe_db.all_tags((err,tags) => {
-                    res.status(200).send(JSON.stringify( {"recipes": recipes, "tags": tags} ));
-                }); 
-            });
-            return;
+        var recipe_idPromise;
+        var tag_idPromise;
+        if (req.body.time) {
+            var token = new Date(req.body.time);
+
+            recipe_idPromise = recipe_db.recent_recipes(token);
+            tag_idPromise = recipe_db.recent_tags(token);
         }
-        var token = new Date(req.body.time);
-        var recipes = [];
-        var tags = [];
-        recipe_db.recent_recipes(token, (err,ids) => {
-            ids.forEach(id => {
-                recipe_db.get(id)
-                    .then((recipe) => { recipes.push(recipe); })
-                    .catch((err) => res.send(500).send("Could not read recipes"));
-            });
-            recipe_db.recent_tags(token, (err,ids) => {
-                ids.forEach(id => {
-                    recipe_db.tag(id,(err,tag) => {
-                        tags.push(tag);
-                    });
-                });
-            });
+        else {
+            recipe_idPromise = recipe_db.all_ids();
+            tag_idPromise = recipe_db.all_tags();
+        }
+            
+        Promise.all([
+            recipe_idPromise,
+            tag_idPromise
+        ]).then((values) => {
+            recipe_ids = values[0],
+            tag_ids = values[1]
+
+            res.status(200).send(JSON.stringify( {"recipes": recipe_ids, "tags": tag_ids} )); 
+        }).catch((err) => { 
+            res.status(500).send(err.message); 
         });
-        
-        res.status(200).send(JSON.stringify( {"recipes": recipes, "tags": tags} ));;
+        return;
     }
     else if (req.params.adr == "ids") {
-        recipe_db.all_ids((err,ids) => {
-            if (err) res.status(500);
-            res.status(200).send(JSON.stringify(ids));
-        });
+        recipe_db.all_ids()
+            .then((ids) => res.status(200).send(JSON.stringify(ids)) )
+            .catch((err) => res.status(500).send(err.message) );
     }
     else {
         recipe_db.get(req.params.adr)
-            .then((recipe) => { res.status(200).send(JSON.stringify(recipe)); })
-            .catch((err) => { res.status(500).send(err.message); });
+            .then((recipe) => res.status(200).send(JSON.stringify(recipe)) )
+            .catch((err) => res.status(500).send(err.message) );
     }
 });
 router.get('/tag/:adr', function (req, res) {
     if (req.params.adr == "ids") {
-        recipe_db.all_tags((err,ids) => {
-            if (err) res.status(500);
-            res.status(200).send(JSON.stringify(ids));
-        }); 
+        recipe_db.all_tags()
+            .then(() => res.status(200).send(JSON.stringify(ids)) )
+            .catch((err) => res.status(err.message) );
     }
     else {
-        recipe_db.tag(req.params.adr, (err,recipe) => {
-            if (err) res.status(500);
-            res.status(200).send(JSON.stringify(recipe));
-        });
+        recipe_db.tag(req.params.adr)
+            .then((recipe) => res.status(200).send(JSON.stringify(recipe)) )
+            .catch((err) => res.status(500).send(err.message) );
     }
 });
 router.put('', function (req, res) {
     recipe_db.put(req.body)
-        .then((recipe) => { res.status(200).send(JSON.stringify(recipe.id)); })
-        .catch((err) => { res.status(500).send(err.message); });
+        .then((recipe) => res.status(200).send(JSON.stringify(recipe.id)) )
+        .catch((err) => res.status(500).send(err.message) );
 });
 router.put('/tag', function (req, res) {
-    recipe_db.put(req.body, (err,tag) => {
-        if (err) res.status(500);
-        res.status(200).send(JSON.stringify(tag.id));
-    });
+    recipe_db.put(req.body)
+        .then(() => res.status(200).send(JSON.stringify(tag.id)))
+        .catch((err) => res.status(500).send(err.message) );
 });
 
 
