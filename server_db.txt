@@ -1,0 +1,8 @@
+CREATE TABLE removed_recipe(
+	recipe_id integer not null,
+	removal_time text not null
+);
+CREATE TABLE removed_tag(
+	tag_id integer not null,
+	removal_time text not null
+);

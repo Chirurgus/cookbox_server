@@ -2,6 +2,7 @@ const sqlite3 = require('sqlite3').verbose();
 
 const db_location = "database/recipe.db";
 const schema_db_location = "database/schema.db"
+const server_db_location = "database/server.db"
 const db_version = 5;
 
 class Recipe {
@@ -218,7 +219,7 @@ async function read_tag_list(id, db) {
     });
 }
 
-exports.get = async function(id) {
+exports.get_recipe = async function(id) {
     return new Promise(async (resolve, reject) => {
         try {
             db = await open_db(db_location,sqlite3.OPEN_READWRITE);
@@ -262,7 +263,7 @@ exports.get = async function(id) {
     });
 }
 
-exports.put = async function(recipe) {
+exports.put_recipe = async function(recipe) {
     return new Promise(async (resolve,reject) => { 
         db = await open_db(db_location,sqlite3.OPEN_READONLY);
         //Check tag is present
@@ -281,10 +282,11 @@ exports.put = async function(recipe) {
 
         db.serialize(() => {
             db.run("BEGIN");
-
+            
+            time = time_token();
             if (!recipe.id) {
-                db.run("INSERT INTO recipe(name,short_description,long_description,target_quantity,target_description,preparation_time,source) values(?,?,?,?,?,?,?)",
-                        [recipe.name,recipe.short_description,recipe.long_description,recipe.target_quantity,recipe.target_description,recipe.preparation_time,recipe.source],
+                db.run("INSERT INTO recipe(name,short_description,long_description,target_quantity,target_description,preparation_time,source,time_modified) values(?,?,?,?,?,?,?,?)",
+                        [recipe.name,recipe.short_description,recipe.long_description,recipe.target_quantity,recipe.target_description,recipe.preparation_time,recipe.source,time],
                         (err) => {
                             if (err) reject(err);
                             recipe.id = this.lastID;
@@ -292,8 +294,8 @@ exports.put = async function(recipe) {
                 );
             }
             else {
-                db.run("UPDATE OR ROLLBACK recipe SET name=?,short_description=?,long_description=?,target_quantity=?,target_description=?,preparation_time=?,source=? WHERE id=?",
-                        [recipe.name,recipe.short_description,recipe.long_description,recipe.target_quantity,recipe.target_description,recipe.preparation_time,recipe.source,recipe.id],
+                db.run("UPDATE OR ROLLBACK recipe SET name=?,short_description=?,long_description=?,target_quantity=?,target_description=?,preparation_time=?,source=?,time_modified=? WHERE id=?",
+                        [recipe.name,recipe.short_description,recipe.long_description,recipe.target_quantity,recipe.target_description,recipe.preparation_time,recipe.source,time,recipe.id],
                         reject
                 );
             }
@@ -367,7 +369,7 @@ exports.all_tags = async function() {
     });
 }
 
-exports.tag = async function(id) {
+exports.get_tag = async function(id) {
     return new Promise( async (resolve,reject) => {
         db = await open_db(db_location, sqlite3.OPEN_READONLY);
         db.get("SELECT id,tag FROM tag WHERE id = ?", [id], (err, row) => {
@@ -392,15 +394,12 @@ exports.put_tag = async function(tag) {
         db.serialize(() => {
             db.run("BEGIN");
             if (tag.id) {
-                db.run("UPDATE tag SET tag = ? where id = ?",[tag.tag, tag.id],err => {
-                    if (err) reject(err);
-                });
+                db.run("UPDATE tag SET tag = ? where id = ?",[tag.tag, tag.id],reject);
             }
             else {
                 db.run("INSERT INTO tag(tag) values(?)",[tag.tag],err => {
                     if (err) reject(err);
                     tag.id = this.lastID;
-                    resolve(tag);
                 });
             }
             db.run("COMMIT");

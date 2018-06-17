@@ -40,7 +40,7 @@ router.get('/:adr', function (req, res) {
             .catch((err) => res.status(500).send(err.message) );
     }
     else {
-        recipe_db.get(req.params.adr)
+        recipe_db.get_recipe(req.params.adr)
             .then((recipe) => res.status(200).send(JSON.stringify(recipe)) )
             .catch((err) => res.status(500).send(err.message) );
     }
@@ -52,18 +52,18 @@ router.get('/tag/:adr', function (req, res) {
             .catch((err) => res.status(err.message) );
     }
     else {
-        recipe_db.tag(req.params.adr)
+        recipe_db.get_tag(req.params.adr)
             .then((recipe) => res.status(200).send(JSON.stringify(recipe)) )
             .catch((err) => res.status(500).send(err.message) );
     }
 });
 router.put('', function (req, res) {
-    recipe_db.put(req.body)
+    recipe_db.put_recipe(req.body)
         .then((recipe) => res.status(200).send(JSON.stringify(recipe.id)) )
         .catch((err) => res.status(500).send(err.message) );
 });
 router.put('/tag', function (req, res) {
-    recipe_db.put(req.body)
+    recipe_db.put_tag(req.body)
         .then(() => res.status(200).send(JSON.stringify(tag.id)))
         .catch((err) => res.status(500).send(err.message) );
 });
