@@ -29,7 +29,12 @@ GET
 PUT  
 /recipes  
 --------/           PUT a new recipe, returns the recipe's new id => {id:...}  
---------/tag        PUT a new tag, returns the tag's new id => {id:...}  
+--------/tag        PUT a new tag, returns the tag's new id => {id:...}
+
+DELETE  
+/recipes  
+--------/:id        DELETE the recipe with id :id  
+--------/tag/:id    DELETE the tag with id :id  
 
 The sync-token is a time stamp that can be found in the time_modified field in recipe/tag tables. If the token provided is null then all recipes/tag ids will be returned. It is then up to the client to ask for all recipes/tags, tags first.
 
