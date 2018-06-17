@@ -28,7 +28,7 @@ router.get('/:adr', function (req, res) {
             recipe_ids = values[0],
             tag_ids = values[1]
 
-            res.status(200).send(JSON.stringify( {"recipe_ids": recipe_ids, "tag_ids": tag_ids} )); 
+            res.status(200).send( {"recipe_ids": recipe_ids, "tag_ids": tag_ids} ); 
         }).catch((err) => { 
             res.status(500).send(err.message); 
         });
@@ -67,6 +67,17 @@ router.put('/tag', function (req, res) {
         .then(() => res.status(200).send(JSON.stringify(tag.id)))
         .catch((err) => res.status(500).send(err.message) );
 });
+router.delete("/:id", function(req,res) {
+    recipe_db.remove_recipe(req.params.id)
+        .then(() => res.status(200) )
+        .catch((err) => res.status(500).send(err.message) );
+});
+router.delete("/tag/:id", function(req,res) {
+    recipe_db.remove_tag(req.params.id)
+        .then(() => res.status(200) )
+        .catch((err) => res.status(500).send(err.message) );
+});
+
 
 
 
@@ -79,13 +90,7 @@ async function f(req,res) {
 }
 
 router.get('/test/:test', function (req,res) {
-    var b = test(() => { return false; });
-    if (b) {
-        res.status(500).send("True");
-    }
-    else {
-        res.status(500).send("False");
-    }
+    res.status(200).send(JSON.stringify(new Date()));
 });
 
 module.exports = router;

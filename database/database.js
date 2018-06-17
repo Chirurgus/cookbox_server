@@ -47,6 +47,19 @@ class Tag {
     }
 }
 
+function time_token() {
+    return JSON.stringify(new Date());
+}
+
+async function touch_recipe(id, time) {
+    return new Promise((resolve,reject) => {
+        db.run("UPDATE recipe SET time_modified  = ? WHERE id = ?",
+                [time, id],
+                err => { reject(err); }
+        );
+        resolve();
+    });
+}
 async function upgrade_db(recipe_db, old_version) {
     return new Promise((resolve, reject) => {
         var schema_db = new sqlite3.Database(schema_db_location, (err) => {
@@ -90,10 +103,12 @@ async function open_db(db_location, mode) {
     return new Promise ((resolve,reject) => {
         var db = new sqlite3.Database(db_location, mode, (err) => {
             if (err) reject(err);
-            else console.log("Opened db");
         });
         db.get("PRAGMA USER_VERSION",[], async (err,res) => {
-            if (err) reject(err); return;
+            if (err) {
+                reject(err); 
+                return;
+            }
 
             var version = res.USER_VERSION;
             if (version < db_version) {
@@ -108,6 +123,7 @@ async function open_db(db_location, mode) {
             db.run("PRAGMA FOREIGN_KEYS=ON", (err) => {
                 reject(err);
             });
+            console.log("Opened db");
             resolve(db);
         });
     });
@@ -210,8 +226,8 @@ exports.get = async function(id) {
             let sql = 'SELECT * FROM recipe WHERE id = ?';
             let params = [id];
 
-            var ingredient_list = await read_ingredient_list(id, db);
-            var instruction_list = await read_instruction_list(id, db);
+            var ingredient_list = await read_ingredient_list(id,db);
+            var instruction_list = await read_instruction_list(id,db);
             var comment_list = await read_comment_list(id,db);
             var tag_list = await read_tag_list(id,db);
 
@@ -247,18 +263,19 @@ exports.get = async function(id) {
 }
 
 exports.put = async function(recipe) {
-    return new Promise((resolve,reject) => { 
-        db = open_db(db_location,sqlite3.OPEN_READONLY);
+    return new Promise(async (resolve,reject) => { 
+        db = await open_db(db_location,sqlite3.OPEN_READONLY);
         //Check tag is present
-        var tag_ok = db.get("SELECT * from tag WHERE id = ?", [recipe.id], (err,row) => {
+        var tag_ok = false;
+        db.get("SELECT * from tag WHERE id = ?", [recipe.id], (err,row) => {
             if (err) reject(err);
-            if (!row) {
-                reject(new Error("No tag with id: " + recipe.id))
+            if (row) {
+                tag_ok = true;
             }
         });
 
         if (!tag_ok) {
-            reject(new Error("Tag is not present."));
+            reject(new Error("No tag with id: " + recipe.id))
             return; 
         }
 
@@ -277,9 +294,7 @@ exports.put = async function(recipe) {
             else {
                 db.run("UPDATE OR ROLLBACK recipe SET name=?,short_description=?,long_description=?,target_quantity=?,target_description=?,preparation_time=?,source=? WHERE id=?",
                         [recipe.name,recipe.short_description,recipe.long_description,recipe.target_quantity,recipe.target_description,recipe.preparation_time,recipe.source,recipe.id],
-                        (err) => {
-                            if (err) reject(err);
-                        }
+                        reject
                 );
             }
 
@@ -318,13 +333,7 @@ exports.put = async function(recipe) {
 
 exports.all_ids = async function() {
     return new Promise( async (resolve,reject) => {
-        try {
-            db = await open_db(db_location, sqlite3.OPEN_READONLY);
-        }
-        catch (err) {
-            reject(err);
-            return;
-        }
+        db = await open_db(db_location, sqlite3.OPEN_READONLY);
         db.all("SELECT id FROM recipe", [], (err, rows) => {
             if (err) {
                 reject(err);
@@ -342,13 +351,7 @@ exports.all_ids = async function() {
 
 exports.all_tags = async function() {
     return new Promise(async (resolve,reject) => {
-        try {
-            db = await open_db(db_location, sqlite3.OPEN_READONLY);
-        }
-        catch(err) {
-            reject(err);
-            return;
-        }
+        db = await open_db(db_location, sqlite3.OPEN_READONLY);
         db.all("SELECT id FROM tag", [], (err, rows) => {
             if (err) {
                 reject(err);
@@ -366,13 +369,7 @@ exports.all_tags = async function() {
 
 exports.tag = async function(id) {
     return new Promise( async (resolve,reject) => {
-        try {
-            db = await open_db(db_location, sqlite3.OPEN_READONLY);
-        }
-        catch (err) {
-            reject(err);
-            return;
-        }
+        db = await open_db(db_location, sqlite3.OPEN_READONLY);
         db.get("SELECT id,tag FROM tag WHERE id = ?", [id], (err, row) => {
             if (err) {
                 reject(err);
@@ -391,13 +388,7 @@ exports.tag = async function(id) {
 
 exports.put_tag = async function(tag) {
     return new Promise( async (resolve,reject) => {
-        try {
-            db = await open_db(db_location,sqlite3.OPEN_READWRITE);
-        }
-        catch(err) {
-            reject(err);
-            return;
-        }
+        db = await open_db(db_location,sqlite3.OPEN_READWRITE);
         db.serialize(() => {
             db.run("BEGIN");
             if (tag.id) {
@@ -419,13 +410,7 @@ exports.put_tag = async function(tag) {
 
 exports.recent_recipes = async function(time) {
     return new Promise( async (resolve,reject) => {
-        try {
-            db = await open_db(db_location,sqlite3.OPEN_READONLY);
-        }
-        catch (err) {
-            reject(err);
-            return;
-        }
+        db = await open_db(db_location,sqlite3.OPEN_READONLY);
         db.all("SELECT id FROM recipe WHERE time_modified > ?", [time], (err,rows) => {
             if (err) {
                 reject(err); 
@@ -444,13 +429,7 @@ exports.recent_recipes = async function(time) {
 
 exports.recent_tags = async function(time) {
     return new Promise( async (resolve,reject) => {
-        try {
         db = await open_db(db_location,sqlite3.OPEN_READONLY);
-        }
-        catch (err) {
-            reject(err);
-            return;
-        }
         db.all("SELECT id FROM tag WHERE time_modified > ?", [time], (err,rows) => {
             if (err) {
                 reject(err);
@@ -463,6 +442,46 @@ exports.recent_tags = async function(time) {
             });
             resolve(ret);
             close_db(db);
+        });
+    });
+}
+
+exports.remove_recipe = async function(id) {
+    return new Promise( async (resolve,reject) => {
+        db = await open_db(db_location, sqlite3.OPEN_READWRITE);
+        db.serialize(() => {
+            db.run("BEGIN");
+            db.run("REMOVE FROM tag_list WHERE recipe_id = ?",[id],reject);
+            db.run("REMOVE FROM comment_list WHERE id = ?",[id],reject);
+            db.run("REMOVE FROM ingredient_list WHERE id = ?",[id],reject);
+            db.run("REMOVE FROM instruction_list WHERE id = ?",[id],reject);
+            db.run("REMOVE FROM recipe WHERE id = ?",[id],reject);
+            db.run("COMMIT");
+            resolve();
+        });
+    });
+}
+
+exports.remove_tag = async function(tag_id) {
+    return new Promise( async (resolve,reject) => {
+        db = await open_db(db_location, sqlite3.OPEN_READWRITE);
+        db.serialize(() => {
+            db.run("BEGIN");
+            db.all("SELECT recipe_id FROM tag_list WHERE tag_id = ?",[tag_id], (err,rows) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                const time = time_token();
+                rows.forEach((row) => {
+                    touch_recipe(row.recipe_id, time)
+                        .catch(reject);
+                });
+            });
+            db.run("REMOVE FROM tag_list WHERE tag_id = ?",[tag_id],reject);
+            db.run("REMOVE FROM tag WHERE id = ?",[tag_id],reject);
+            db.run("COMMIT");
+            resolve();
         });
     });
 }
