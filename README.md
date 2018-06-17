@@ -22,14 +22,14 @@ GET
 /recipe  
 -------/:id        GET recipe with id :id {id:...,name:...,....}  
 -------/ids        GET a list of all recipe ids => {ids:[...]}  
---------/sync       GET a list of all recipe ids that were updated since the time in sync-token => {recipe_ids:[...], tag_ids:[...]}  
+-------/sync       GET a list of all recipe ids that were updated since the time in sync-token => {recipe_ids:[...], tag_ids:[...]}  
 -------/tag/:id    GET the tag with the id :id => {id:...,tag:...}  
 -------/tag/ids    GET all tag ids => {ids:[...]}  
 
 PUT  
 /recipe  
 -------/           PUT a new recipe, returns the recipe's new id => {id:...}  
--------/tag        PUT a new tag, returns the tag's new id => {id:...}
+-------/tag        PUT a new tag, expects {id:...,tag:...}, returns the tag's new id => {id:...}
 
 DELETE  
 /recipe  
