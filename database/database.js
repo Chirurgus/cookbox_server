@@ -2,8 +2,7 @@ const sqlite3 = require('sqlite3').verbose();
 
 const db_location = "database/recipe.db";
 const schema_db_location = "database/schema.db"
-const server_db_location = "database/server.db"
-const db_version = 5;
+const db_version = 6;
 
 class Recipe {
     constructor(id,
@@ -75,23 +74,40 @@ async function upgrade_db(recipe_db, old_version) {
         }
 
         recipe_db.serialize(() => {
-        schema_db.serialise(() => {
+        schema_db.serialize(() => {
+        
+        recipe_db.exec("BEGIN", err => {
+            if (err) {
+                reject(new Error("Can't begin transaction: " + err));
+            }
+        });
 
-        for (var v = 4; v <= db_version; ++v) {
-            if (old_version <= v) {
-                schema_db.get("SELECT migration FROM schema WHERE version = ?",[v], (err,row) => {
+
+        while (old_version < db_version) {
+            var next_version = old_version + 1;
+            schema_db.get("SELECT migration FROM schema WHERE version = ?",[next_version], (err,row) => {
+                if (err) {
+                    reject(new Error("Cannot read migration sql for version " + next_version + ":" + err));
+                }
+                recipe_db.exec(row.migration, err => {
                     if (err) {
-                        reject(new Error("Cannot read migration sql for version " + v + ":" + err.message));
-                        return;
+                        reject(new Error("Cannot migrate databse: " + err));
                     }
-                    recipe_db.exec(row.migration, err => {
-                        reject(new Error("Cannot migrate databse: " + err.message));
-                        return;
-                    });
                 });
-                ++old_version;
-            }   
+                recipe_db.run("PRAGMA USER_VERSION = ?", [next_version], err => {
+                    if (err) {
+                        reject(new Error("Could not change USER_VERSION: " + err));
+                    }
+                });
+            });
+            ++old_version;
         }
+
+        recipe_db.exec("COMMIT", err => {
+            if (err) {
+            reject(new Error("Can't end transaction: " + err))
+            }
+        });
         
         resolve();
 
@@ -114,7 +130,7 @@ async function open_db(db_location, mode) {
             var version = res.USER_VERSION;
             if (version < db_version) {
                 try {
-                    await upgrade_db(db, version, db_version);
+                    await upgrade_db(db, version);
                 }
                 catch (err) {
                     reject(err);
