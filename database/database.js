@@ -472,8 +472,9 @@ exports.remove_recipe = async function(id) {
             db.run("REMOVE FROM instruction_list WHERE id = ?",[id],reject);
             db.run("REMOVE FROM recipe WHERE id = ?",[id],reject);
             db.run("COMMIT");
-            resolve();
         });
+        close_db(db);
+        resolve();
     });
 }
 
@@ -496,7 +497,50 @@ exports.remove_tag = async function(tag_id) {
             db.run("REMOVE FROM tag_list WHERE tag_id = ?",[tag_id],reject);
             db.run("REMOVE FROM tag WHERE id = ?",[tag_id],reject);
             db.run("COMMIT");
-            resolve();
         });
+        close_db(db);
+        resolve();
+    });
+}
+
+exports.mark_delete_recipe = async function(id) {
+    return new Promise( async (resolve,reject) => {
+        db = await open_db(db_location,sqlite3.OPEN_READWRITE);
+        db.run("UPDATE recipe SET deleted = \"true\" WHERE id = ?", [id], err => {
+            if (err) {
+                reject(err);
+                return;
+            }
+        });
+        close_db(db);
+        resolve();
+    });
+}
+
+exports.mark_delete_tag = async function(id) {
+    return new Promise( async (resolve,reject) => {
+        db = await open_db(db_location,sqlite3.OPEN_READWRITE);
+        db.serialize(() => {
+            db.run("UPDATE tag SET deleted = \"true\" WHERE id = ?", [id], err => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+            });
+            db.all("SELECT recipe_id FROM tag_list WHERE tag_id = ?",[tag_id], (err,rows) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                const time = time_token();
+                rows.forEach((row) => {
+                    touch_recipe(row.recipe_id, time)
+                        .catch(reject);
+                });
+            });
+
+        });
+        close_db(db);
+        resolve();
     });
 }

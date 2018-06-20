@@ -68,12 +68,12 @@ router.put('/tag', function (req, res) {
         .catch((err) => res.status(500).send(err.message) );
 });
 router.delete("/:id", function(req,res) {
-    recipe_db.remove_recipe(req.params.id)
+    recipe_db.mark_delete_recipe(req.params.id)
         .then(() => res.status(200) )
         .catch((err) => res.status(500).send(err.message) );
 });
 router.delete("/tag/:id", function(req,res) {
-    recipe_db.remove_tag(req.params.id)
+    recipe_db.mark_delete_tag(req.params.id)
         .then(() => res.status(200) )
         .catch((err) => res.status(500).send(err.message) );
 });
