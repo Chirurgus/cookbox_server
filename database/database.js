@@ -2,7 +2,7 @@ const sqlite3 = require('sqlite3').verbose();
 
 const db_location = "database/recipe.db";
 const schema_db_location = "database/schema.db"
-const db_version = 6;
+const db_version = 7;
 
 class Recipe {
     constructor(id,
@@ -89,6 +89,8 @@ async function upgrade_db(recipe_db, old_version) {
                 if (err) {
                     reject(new Error("Cannot read migration sql for version " + next_version + ":" + err));
                 }
+                console.log("exec row mig" + old_version + "=>" + next_version);
+                console.log(row.migration)
                 recipe_db.exec(row.migration, err => {
                     if (err) {
                         reject(new Error("Cannot migrate databse: " + err));
@@ -108,7 +110,7 @@ async function upgrade_db(recipe_db, old_version) {
             reject(new Error("Can't end transaction: " + err))
             }
         });
-        
+        console.log("Database upgraded to version " + db_version);        
         resolve();
 
         });
