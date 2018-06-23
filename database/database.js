@@ -60,8 +60,27 @@ async function touch_recipe(id, time) {
         resolve();
     });
 }
-async function upgrade_db(recipe_db, old_version) {
+
+migrate_to_next_version = async function(next_version, schema_db, recipe_db) {
     return new Promise((resolve, reject) => {
+        schema_db.get("SELECT migration FROM schema WHERE version = ?",[next_version], (err,row) => {
+            if (err) {
+                reject(new Error("Cannot read migration sql for version " + next_version + ":" + err));
+            }
+            console.log("exec row mig =>" + next_version);
+            console.log(row.migration);
+            recipe_db.exec(row.migration, err => {
+                if (err) {
+                    reject(new Error("Cannot migrate databse: " + err));
+                }
+                resolve();
+            });
+        });
+    });
+}
+
+async function upgrade_db(recipe_db, old_version) {
+    return new Promise( async (resolve, reject) => {
         var schema_db = new sqlite3.Database(schema_db_location, (err) => {
             if (err)
                 reject(err.message);
@@ -73,43 +92,44 @@ async function upgrade_db(recipe_db, old_version) {
             return;
         }
 
-        recipe_db.serialize(() => {
-        schema_db.serialize(() => {
-        
+        recipe_db.serialize(async () => {
+        schema_db.serialize(async () => {
+       
+        var error = false;
         recipe_db.exec("BEGIN", err => {
             if (err) {
                 reject(new Error("Can't begin transaction: " + err));
+                error=true;
             }
         });
-
-
-        while (old_version < db_version) {
-            var next_version = old_version + 1;
-            schema_db.get("SELECT migration FROM schema WHERE version = ?",[next_version], (err,row) => {
-                if (err) {
-                    reject(new Error("Cannot read migration sql for version " + next_version + ":" + err));
-                }
-                console.log("exec row mig" + old_version + "=>" + next_version);
-                console.log(row.migration)
-                recipe_db.exec(row.migration, err => {
-                    if (err) {
-                        reject(new Error("Cannot migrate databse: " + err));
-                    }
-                });
-                recipe_db.run("PRAGMA USER_VERSION = ?", [next_version], err => {
-                    if (err) {
-                        reject(new Error("Could not change USER_VERSION: " + err));
-                    }
-                });
-            });
-            ++old_version;
-        }
+        if (error) { return; }
+        
+        for (var next_version=old_version+1; next_version <= db_version; ++next_version) {
+            try {
+                await migrate_to_next_version(next_version, schema_db, recipe_db);
+            }
+            catch(err) {
+                reject(err);
+                return;
+            }
+        } 
+        
+        recipe_db.run("PRAGMA USER_VERSION = ?", [db_version], err => {
+            if (err) {
+                reject(new Error("Could not change USER_VERSION: " + err));
+                error = true;
+            }
+        });
+        if (error) return;
 
         recipe_db.exec("COMMIT", err => {
             if (err) {
-            reject(new Error("Can't end transaction: " + err))
+                reject(new Error("Can't end transaction: " + err))
+                error = true;
             }
         });
+        if (error) return;
+
         console.log("Database upgraded to version " + db_version);        
         resolve();
 
