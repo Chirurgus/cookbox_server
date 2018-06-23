@@ -51,6 +51,7 @@ function time_token() {
     return JSON.stringify(new Date());
 }
 
+// Deprecated sine triggers in the database itself should handle it
 async function touch_recipe(id, time) {
     return new Promise((resolve,reject) => {
         db.run("UPDATE recipe SET time_modified  = ? WHERE id = ?",
@@ -483,16 +484,12 @@ exports.recent_tags = async function(time) {
     });
 }
 
-exports.remove_recipe = async function(id) {
+exports.delete_recipe = async function(id) {
     return new Promise( async (resolve,reject) => {
         db = await open_db(db_location, sqlite3.OPEN_READWRITE);
         db.serialize(() => {
             db.run("BEGIN");
-            db.run("REMOVE FROM tag_list WHERE recipe_id = ?",[id],reject);
-            db.run("REMOVE FROM comment_list WHERE id = ?",[id],reject);
-            db.run("REMOVE FROM ingredient_list WHERE id = ?",[id],reject);
-            db.run("REMOVE FROM instruction_list WHERE id = ?",[id],reject);
-            db.run("REMOVE FROM recipe WHERE id = ?",[id],reject);
+            db.run("DELETE FROM recipe WHERE id = ?",[id],reject);
             db.run("COMMIT");
         });
         close_db(db);
@@ -500,24 +497,12 @@ exports.remove_recipe = async function(id) {
     });
 }
 
-exports.remove_tag = async function(tag_id) {
+exports.delete_tag = async function(tag_id) {
     return new Promise( async (resolve,reject) => {
         db = await open_db(db_location, sqlite3.OPEN_READWRITE);
         db.serialize(() => {
             db.run("BEGIN");
-            db.all("SELECT recipe_id FROM tag_list WHERE tag_id = ?",[tag_id], (err,rows) => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
-                const time = time_token();
-                rows.forEach((row) => {
-                    touch_recipe(row.recipe_id, time)
-                        .catch(reject);
-                });
-            });
-            db.run("REMOVE FROM tag_list WHERE tag_id = ?",[tag_id],reject);
-            db.run("REMOVE FROM tag WHERE id = ?",[tag_id],reject);
+            db.run("DELETE FROM tag WHERE id = ?",[tag_id],reject);
             db.run("COMMIT");
         });
         close_db(db);
@@ -549,18 +534,6 @@ exports.mark_delete_tag = async function(id) {
                     return;
                 }
             });
-            db.all("SELECT recipe_id FROM tag_list WHERE tag_id = ?",[tag_id], (err,rows) => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
-                const time = time_token();
-                rows.forEach((row) => {
-                    touch_recipe(row.recipe_id, time)
-                        .catch(reject);
-                });
-            });
-
         });
         close_db(db);
         resolve();
