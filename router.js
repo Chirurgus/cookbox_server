@@ -58,6 +58,19 @@ router.get('/tag/:adr', function (req, res) {
             .catch((err) => res.status(500).send(err.message) );
     }
 });
+router.get("/schema/schema/:ver", function(req,res) {
+    recipe_db.get_schema(req.params.ver)
+        .then( (schema) => res.status(200).send( {"schema": schema } ) )
+        .catch( err => res.status(500).send(err.message) );
+});
+router.get("/schema/migration/:ver", function(req,res) {
+    recipe_db.get_migration(req.params.ver)
+        .then( migration => res.status(200).send( {"migration": migration } ) )
+        .catch( err => res.status(500).send(err.message) );
+});
+
+
+
 router.put('', function (req, res) {
     recipe_db.put_recipe(req.body)
         .then((recipe) => res.status(200).send(JSON.stringify(recipe.id)) )
@@ -68,6 +81,8 @@ router.put('/tag', function (req, res) {
         .then(() => res.status(200).send(JSON.stringify(tag.id)))
         .catch((err) => res.status(500).send(err.message) );
 });
+
+
 router.delete("/:id", function(req,res) {
     recipe_db.mark_delete_recipe(req.params.id)
         .then(() => res.status(200) )

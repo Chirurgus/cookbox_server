@@ -80,14 +80,25 @@ migrate_to_next_version = async function(next_version, schema_db, recipe_db) {
     });
 }
 
+async function open_schema_db(path) {
+    return new Promise((resolve,reject) => {
+        var error = false;
+        var schema_db = new sqlite3.Database(path, (err) => {
+            if (err) {
+                reject(err);
+                error=true;
+            }
+        });
+        if (!error) {
+            resolve(schema_db);
+        }
+    });
+}
+
 async function upgrade_db(recipe_db, old_version) {
     return new Promise( async (resolve, reject) => {
-        var schema_db = new sqlite3.Database(schema_db_location, (err) => {
-            if (err)
-                reject(err.message);
-                return;
-        });
-        
+        schema_db = await open_schema_db(schema_db_location);                
+
         if (old_version < 3) {
             reject(new Error("Cannot update db schema: database too old"));
             return;
@@ -552,4 +563,46 @@ exports.mark_delete_tag = async function(id) {
 
 exports.get_db_version = function() {
     return db_version
+}
+
+exports.get_schema = async function(version) {
+    return new Promise(async (resolve,reject) => {
+        schema_db = await open_schema_db(schema_db_location);
+        schema_db.get("SELECT schema from schema where version = ?",[version],(err,row) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+
+            resolve(row.schema);
+        });
+    });
+}
+
+exports.get_schema = async function(version) {
+    return new Promise(async (resolve,reject) => {
+        schema_db = await open_schema_db(schema_db_location);
+        schema_db.get("SELECT schema from schema where version = ?",[version],(err,row) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+
+            resolve(row.schema);
+        });
+    });
+}
+
+exports.get_migration = async function(version) {
+    return new Promise(async (resolve,reject) => {
+        schema_db = await open_schema_db(schema_db_location);
+        schema_db.get("SELECT migration from schema where version = ?",[version],(err,row) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+
+            resolve(row.migration);
+        });
+    });
 }
