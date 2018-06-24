@@ -139,33 +139,42 @@ async function upgrade_db(recipe_db, old_version) {
     });
 }
 
-async function open_db(db_location, mode) {
-    return new Promise ((resolve,reject) => {
-        var db = new sqlite3.Database(db_location, mode, (err) => {
-            if (err) reject(err);
-        });
+exports.get_db_version = async function(db) {
+    return Promise((resolve, reject) => {
         db.get("PRAGMA USER_VERSION",[], async (err,res) => {
             if (err) {
                 reject(err); 
                 return;
             }
-
-            var version = res.USER_VERSION;
-            if (version < db_version) {
-                try {
-                    await upgrade_db(db, version);
-                }
-                catch (err) {
-                    reject(err);
-                    return;
-                }
-            }
-            db.run("PRAGMA FOREIGN_KEYS=ON", (err) => {
-                reject(err);
-            });
-            console.log("Opened db");
-            resolve(db);
+            resolve(res.USER_VERSION);
         });
+    });
+
+}
+
+async function open_recipe_db(db_location, mode) {
+    return new Promise ((resolve,reject) => {
+        var db = new sqlite3.Database(db_location, mode, (err) => {
+            if (err) reject(err);
+        });
+        
+        try {
+            var version = await get_db_version(db);
+
+            if (version < db_version) {
+                await upgrade_db(db, version);
+            }
+        }
+        catch (err) {
+            reject(err);
+            return;
+        }
+
+        db.run("PRAGMA FOREIGN_KEYS=ON", (err) => {
+            reject(err);
+        });
+        console.log("Opened db");
+        resolve(db);
     });
 }
 
@@ -261,7 +270,7 @@ async function read_tag_list(id, db) {
 exports.get_recipe = async function(id) {
     return new Promise(async (resolve, reject) => {
         try {
-            db = await open_db(db_location,sqlite3.OPEN_READWRITE);
+            db = await open_recipe_db(db_location,sqlite3.OPEN_READWRITE);
         
             let sql = 'SELECT * FROM recipe WHERE id = ?';
             let params = [id];
@@ -304,7 +313,7 @@ exports.get_recipe = async function(id) {
 
 exports.put_recipe = async function(recipe) {
     return new Promise(async (resolve,reject) => { 
-        db = await open_db(db_location,sqlite3.OPEN_READONLY);
+        db = await open_recipe_db(db_location,sqlite3.OPEN_READONLY);
         //Check tag is present
         var tag_ok = false;
         db.get("SELECT * from tag WHERE id = ?", [recipe.id], (err,row) => {
@@ -374,7 +383,7 @@ exports.put_recipe = async function(recipe) {
 
 exports.all_ids = async function() {
     return new Promise( async (resolve,reject) => {
-        db = await open_db(db_location, sqlite3.OPEN_READONLY);
+        db = await open_recipe_db(db_location, sqlite3.OPEN_READONLY);
         db.all("SELECT id FROM recipe", [], (err, rows) => {
             if (err) {
                 reject(err);
@@ -392,7 +401,7 @@ exports.all_ids = async function() {
 
 exports.all_tags = async function() {
     return new Promise(async (resolve,reject) => {
-        db = await open_db(db_location, sqlite3.OPEN_READONLY);
+        db = await open_recipe_db(db_location, sqlite3.OPEN_READONLY);
         db.all("SELECT id FROM tag", [], (err, rows) => {
             if (err) {
                 reject(err);
@@ -410,7 +419,7 @@ exports.all_tags = async function() {
 
 exports.get_tag = async function(id) {
     return new Promise( async (resolve,reject) => {
-        db = await open_db(db_location, sqlite3.OPEN_READONLY);
+        db = await open_recipe_db(db_location, sqlite3.OPEN_READONLY);
         db.get("SELECT id,tag FROM tag WHERE id = ?", [id], (err, row) => {
             if (err) {
                 reject(err);
@@ -429,7 +438,7 @@ exports.get_tag = async function(id) {
 
 exports.put_tag = async function(tag) {
     return new Promise( async (resolve,reject) => {
-        db = await open_db(db_location,sqlite3.OPEN_READWRITE);
+        db = await open_recipe_db(db_location,sqlite3.OPEN_READWRITE);
         db.serialize(() => {
             db.run("BEGIN");
             if (tag.id) {
@@ -448,7 +457,7 @@ exports.put_tag = async function(tag) {
 
 exports.recent_recipes = async function(time) {
     return new Promise( async (resolve,reject) => {
-        db = await open_db(db_location,sqlite3.OPEN_READONLY);
+        db = await open_recipe_db(db_location,sqlite3.OPEN_READONLY);
         db.all("SELECT id FROM recipe WHERE time_modified > ?", [time], (err,rows) => {
             if (err) {
                 reject(err); 
@@ -467,7 +476,7 @@ exports.recent_recipes = async function(time) {
 
 exports.recent_tags = async function(time) {
     return new Promise( async (resolve,reject) => {
-        db = await open_db(db_location,sqlite3.OPEN_READONLY);
+        db = await open_recipe_db(db_location,sqlite3.OPEN_READONLY);
         db.all("SELECT id FROM tag WHERE time_modified > ?", [time], (err,rows) => {
             if (err) {
                 reject(err);
@@ -486,7 +495,7 @@ exports.recent_tags = async function(time) {
 
 exports.delete_recipe = async function(id) {
     return new Promise( async (resolve,reject) => {
-        db = await open_db(db_location, sqlite3.OPEN_READWRITE);
+        db = await open_recipe_db(db_location, sqlite3.OPEN_READWRITE);
         db.serialize(() => {
             db.run("BEGIN");
             db.run("DELETE FROM recipe WHERE id = ?",[id],reject);
@@ -499,7 +508,7 @@ exports.delete_recipe = async function(id) {
 
 exports.delete_tag = async function(tag_id) {
     return new Promise( async (resolve,reject) => {
-        db = await open_db(db_location, sqlite3.OPEN_READWRITE);
+        db = await open_recipe_db(db_location, sqlite3.OPEN_READWRITE);
         db.serialize(() => {
             db.run("BEGIN");
             db.run("DELETE FROM tag WHERE id = ?",[tag_id],reject);
@@ -512,7 +521,7 @@ exports.delete_tag = async function(tag_id) {
 
 exports.mark_delete_recipe = async function(id) {
     return new Promise( async (resolve,reject) => {
-        db = await open_db(db_location,sqlite3.OPEN_READWRITE);
+        db = await open_recipe_db(db_location,sqlite3.OPEN_READWRITE);
         db.run("UPDATE recipe SET deleted = \"true\" WHERE id = ?", [id], err => {
             if (err) {
                 reject(err);
@@ -526,7 +535,7 @@ exports.mark_delete_recipe = async function(id) {
 
 exports.mark_delete_tag = async function(id) {
     return new Promise( async (resolve,reject) => {
-        db = await open_db(db_location,sqlite3.OPEN_READWRITE);
+        db = await open_recipe_db(db_location,sqlite3.OPEN_READWRITE);
         db.serialize(() => {
             db.run("UPDATE tag SET deleted = \"true\" WHERE id = ?", [id], err => {
                 if (err) {
