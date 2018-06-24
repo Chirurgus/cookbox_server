@@ -27,8 +27,9 @@ router.get('/:adr', function (req, res) {
         ]).then((values) => {
             recipe_ids = values[0],
             tag_ids = values[1]
+            db_version = recipe_db.get_db_version();
 
-            res.status(200).send( {"recipe_ids": recipe_ids, "tag_ids": tag_ids} ); 
+            res.status(200).send( {"recipe_ids": recipe_ids, "tag_ids": tag_ids, "db_version": db_version} ); 
         }).catch((err) => { 
             res.status(500).send(err.message); 
         });

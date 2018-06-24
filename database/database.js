@@ -139,8 +139,8 @@ async function upgrade_db(recipe_db, old_version) {
     });
 }
 
-exports.get_db_version = async function(db) {
-    return Promise((resolve, reject) => {
+async function get_db_version_internal(db) {
+    return new Promise((resolve, reject) => {
         db.get("PRAGMA USER_VERSION",[], async (err,res) => {
             if (err) {
                 reject(err); 
@@ -153,13 +153,13 @@ exports.get_db_version = async function(db) {
 }
 
 async function open_recipe_db(db_location, mode) {
-    return new Promise ((resolve,reject) => {
+    return new Promise (async (resolve,reject) => {
         var db = new sqlite3.Database(db_location, mode, (err) => {
             if (err) reject(err);
         });
         
         try {
-            var version = await get_db_version(db);
+            var version = await get_db_version_internal(db);
 
             if (version < db_version) {
                 await upgrade_db(db, version);
@@ -547,4 +547,9 @@ exports.mark_delete_tag = async function(id) {
         close_db(db);
         resolve();
     });
+}
+
+
+exports.get_db_version = function() {
+    return db_version
 }
