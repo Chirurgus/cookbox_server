@@ -326,14 +326,18 @@ exports.put_recipe = async function(recipe) {
     return new Promise(async (resolve,reject) => { 
         db = await open_recipe_db(db_location,sqlite3.OPEN_READONLY);
         
+
         //Check tag is present
-        var tag_ok = false;
-        db.get("SELECT * from tag WHERE id = ?", [recipe.id], (err,row) => {
-            if (err) reject(err);
-            if (row) {
-                tag_ok = true;
-            }
-        });
+        let tag_ok = true;
+        for (let i = 0; i <= recipe.tag_list.length; ++i) {
+            db.get("SELECT * from tag WHERE id = ?", [recipe.tag_list[i]], (err,row) => {
+                if (err) {
+                    tag_ok = false;
+                }
+            });
+
+            
+        }
 
         if (!tag_ok) {
             reject(new Error("No tag with id: " + recipe.id))
