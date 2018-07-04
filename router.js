@@ -6,34 +6,42 @@ var recipe_db = require("./database/database")
 var router = express.Router();
 router.use(bodyParser.json());
 
+function handleSync(token, req, res) {
+    var recipe_idPromise;
+    var tag_idPromise;
+    if (token) {
+        var time = new Date(req.body.time);
+
+        recipe_idPromise = recipe_db.recent_recipes(time);
+        tag_idPromise = recipe_db.recent_tags(time);
+    }
+    else {
+        recipe_idPromise = recipe_db.all_ids();
+        tag_idPromise = recipe_db.all_tags();
+    }
+        
+    Promise.all([
+        recipe_idPromise,
+        tag_idPromise
+    ]).then((values) => {
+        recipe_ids = values[0],
+        tag_ids = values[1]
+        db_version = recipe_db.get_db_version();
+
+        res.status(200).send( {"recipe_ids": recipe_ids, "tag_ids": tag_ids, "db_version": db_version} ); 
+    }).catch((err) => { 
+        res.status(500).send(err.message); 
+    });
+    return;
+}
+
+router.get('/sync/:token', function (req, res) {
+    handleSync(req.params.token,req,res);
+});
+
 router.get('/:adr', function (req, res) {
     if (req.params.adr == "sync") {
-        var recipe_idPromise;
-        var tag_idPromise;
-        if (req.body.time) {
-            var token = new Date(req.body.time);
-
-            recipe_idPromise = recipe_db.recent_recipes(token);
-            tag_idPromise = recipe_db.recent_tags(token);
-        }
-        else {
-            recipe_idPromise = recipe_db.all_ids();
-            tag_idPromise = recipe_db.all_tags();
-        }
-            
-        Promise.all([
-            recipe_idPromise,
-            tag_idPromise
-        ]).then((values) => {
-            recipe_ids = values[0],
-            tag_ids = values[1]
-            db_version = recipe_db.get_db_version();
-
-            res.status(200).send( {"recipe_ids": recipe_ids, "tag_ids": tag_ids, "db_version": db_version} ); 
-        }).catch((err) => { 
-            res.status(500).send(err.message); 
-        });
-        return;
+        handleSync(null, req, res);
     }
     else if (req.params.adr == "ids") {
         recipe_db.all_ids()

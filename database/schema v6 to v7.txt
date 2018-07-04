@@ -1,0 +1,307 @@
+BEGIN;
+
+INSERT INTO schema
+VALUES(
+7,
+"CREATE TABLE tag(
+  id integer primary key,
+  tag text unique not null,
+  time_modified text not null default CURRENT_TIMESTAMP
+);                                               
+CREATE TABLE tag_list(                                
+  tag_id integer not null references tag(id) ON DELETE CASCADE,         
+  recipe_id integer not null references recipe(id) ON DELETE CASCADE    
+);                                                    
+CREATE TABLE instruction_list(                        
+  recipe_id integer not null references recipe(id) ON DELETE CASCADE,            
+  position integer not null,                          
+  instruction text not null default ""                           
+);                                                    
+CREATE TABLE comment_list(                            
+  recipe_id integer not null references recipe(id) ON DELETE CASCADE,   
+  comment text not null default ""
+);                                                    
+CREATE TABLE recipe(
+  id integer primary key,                             
+  name text not null default "",                      
+  short_description text not null default "",         
+  long_description text not null default "",          
+  target_quantity real not null default 1,                      
+  target_description text not null default "",
+  preparation_time real not null default 0,
+  source text not null default "",
+  deleted boolean not null default false,
+  time_modified text not null default CURRENT_TIMESTAMP
+);                                           
+CREATE TABLE ingredient_list(
+  recipe_id integer not null references recipe(id) ON DELETE CASCADE,   
+  quantity real not null default 1,                             
+  description text not null default "",                          
+  other_recipe integer null references recipe(id) ON DELETE RESTRICT     
+);
+
+CREATE TRIGGER on_update_recipe
+AFTER UPDATE ON recipe
+BEGIN                                                     
+  UPDATE recipe
+  SET time_modified = datetime()
+  WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER on_update_ingredient_list
+AFTER UPDATE ON ingredient_list
+BEGIN                                                     
+  UPDATE recipe
+  SET time_modified = datetime()
+  WHERE id = NEW.recipe_id;
+END;
+
+CREATE TRIGGER on_update_instruction_list
+AFTER UPDATE ON instruction_list
+BEGIN                                                     
+  UPDATE recipe
+  SET time_modified = datetime()
+  WHERE id = NEW.recipe_id;
+END;
+
+CREATE TRIGGER on_update_comment_list
+AFTER UPDATE ON comment_list
+BEGIN                                                     
+  UPDATE recipe
+  SET time_modified = datetime()
+  WHERE id = NEW.recipe_id;
+END;
+
+CREATE TRIGGER on_update_tag_list
+AFTER UPDATE ON tag_list
+BEGIN                                                     
+  UPDATE recipe
+  SET time_modified = datetime()
+  WHERE id = NEW.recipe_id;
+END;
+
+CREATE TRIGGER on_insert_ingredient_list
+AFTER INSERT ON ingredient_list
+BEGIN                                                     
+  UPDATE recipe
+  SET time_modified = datetime()
+  WHERE id = NEW.recipe_id;
+END;
+
+CREATE TRIGGER on_insert_instruction_list
+AFTER INSERT ON instruction_list
+BEGIN                                                     
+  UPDATE recipe
+  SET time_modified = datetime()
+  WHERE id = NEW.recipe_id;
+END;
+
+CREATE TRIGGER on_insert_comment_list
+AFTER INSERT ON comment_list
+BEGIN                                                     
+  UPDATE recipe
+  SET time_modified = datetime()
+  WHERE id = NEW.recipe_id;
+END;
+
+CREATE TRIGGER on_insert_tag_list
+AFTER INSERT ON tag_list
+BEGIN                                                     
+  UPDATE recipe
+  SET time_modified = datetime()
+  WHERE id = NEW.recipe_id;
+END;
+
+CREATE TRIGGER on_delete_ingredient_list
+AFTER DELETE ON ingredient_list
+BEGIN                                                     
+  UPDATE recipe
+  SET time_modified = datetime()
+  WHERE id = OLD.recipe_id;
+END;
+
+CREATE TRIGGER on_delete_instruction_list
+AFTER DELETE ON instruction_list
+BEGIN                                                     
+  UPDATE recipe
+  SET time_modified = datetime()
+  WHERE id = OLD.recipe_id;
+END;
+
+CREATE TRIGGER on_delete_tag_list
+AFTER DELETE ON tag_list
+BEGIN                                                     
+  UPDATE recipe
+  SET time_modified = datetime()
+  WHERE id = OLD.recipe_id;
+END;
+
+CREATE TRIGGER on_delete_comment_list
+AFTER DELETE ON comment_list
+BEGIN                                                     
+  UPDATE recipe
+  SET time_modified = datetime()
+  WHERE id = OLD.recipe_id;
+END;
+
+CREATE TRIGGER on_update_tag
+AFTER UPDATE ON tag
+BEGIN                                                     
+  UPDATE tag
+  SET time_modified = datetime()
+  WHERE id = NEW.id;
+END;",
+"BEGIN;
+
+CREATE TABLE new_tag_list(                                
+  tag_id integer not null references tag(id) ON DELETE CASCADE,         
+  recipe_id integer not null references recipe(id) ON DELETE CASCADE    
+);                                                    
+CREATE TABLE new_instruction_list(                        
+  recipe_id integer not null references recipe(id) ON DELETE CASCADE,            
+  position integer not null,                          
+  instruction text not null default ""                           
+);                                                    
+CREATE TABLE new_comment_list(                            
+  recipe_id integer not null references recipe(id) ON DELETE CASCADE,   
+  comment text not null default ""
+); 
+CREATE TABLE new_ingredient_list(
+  recipe_id integer not null references recipe(id) ON DELETE CASCADE,   
+  quantity real not null default 1,                             
+  description text not null default "",                          
+  other_recipe integer null references recipe(id) ON DELETE RESTRICT     
+);
+
+INSERT INTO new_tag_list SELECT * FROM tag_list;
+INSERT INTO new_instruction_list SELECT * FROM instruction_list;
+INSERT INTO new_comment_list SELECT * FROM comment_list;
+INSERT INTO new_ingredient_list SELECT * FROM ingredient_list;
+
+DROP TABLE tag_list;
+DROP TABLE instruction_list;
+DROP TABLE ingredient_list;
+DROP TABLE comment_list;
+
+ALTER TABLE new_tag_list RENAME TO tag_list;
+ALTER TABLE new_instruction_list RENAME TO instruction_list;
+ALTER TABLE new_comment_list RENAME TO comment_list;
+ALTER TABLE new_ingredient_list RENAME TO ingredient_list;
+
+CREATE TRIGGER on_update_recipe
+AFTER UPDATE ON recipe
+BEGIN                                                     
+  UPDATE recipe
+  SET time_modified = datetime()
+  WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER on_update_ingredient_list
+AFTER UPDATE ON ingredient_list
+BEGIN                                                     
+  UPDATE recipe
+  SET time_modified = datetime()
+  WHERE id = NEW.recipe_id;
+END;
+
+CREATE TRIGGER on_update_instruction_list
+AFTER UPDATE ON instruction_list
+BEGIN                                                     
+  UPDATE recipe
+  SET time_modified = datetime()
+  WHERE id = NEW.recipe_id;
+END;
+
+CREATE TRIGGER on_update_comment_list
+AFTER UPDATE ON comment_list
+BEGIN                                                     
+  UPDATE recipe
+  SET time_modified = datetime()
+  WHERE id = NEW.recipe_id;
+END;
+
+CREATE TRIGGER on_update_tag_list
+AFTER UPDATE ON tag_list
+BEGIN                                                     
+  UPDATE recipe
+  SET time_modified = datetime()
+  WHERE id = NEW.recipe_id;
+END;
+
+CREATE TRIGGER on_insert_ingredient_list
+AFTER INSERT ON ingredient_list
+BEGIN                                                     
+  UPDATE recipe
+  SET time_modified = datetime()
+  WHERE id = NEW.recipe_id;
+END;
+
+CREATE TRIGGER on_insert_instruction_list
+AFTER INSERT ON instruction_list
+BEGIN                                                     
+  UPDATE recipe
+  SET time_modified = datetime()
+  WHERE id = NEW.recipe_id;
+END;
+
+CREATE TRIGGER on_insert_comment_list
+AFTER INSERT ON comment_list
+BEGIN                                                     
+  UPDATE recipe
+  SET time_modified = datetime()
+  WHERE id = NEW.recipe_id;
+END;
+
+CREATE TRIGGER on_insert_tag_list
+AFTER INSERT ON tag_list
+BEGIN                                                     
+  UPDATE recipe
+  SET time_modified = datetime()
+  WHERE id = NEW.recipe_id;
+END;
+
+CREATE TRIGGER on_delete_ingredient_list
+AFTER DELETE ON ingredient_list
+BEGIN                                                     
+  UPDATE recipe
+  SET time_modified = datetime()
+  WHERE id = OLD.recipe_id;
+END;
+
+CREATE TRIGGER on_delete_instruction_list
+AFTER DELETE ON instruction_list
+BEGIN                                                     
+  UPDATE recipe
+  SET time_modified = datetime()
+  WHERE id = OLD.recipe_id;
+END;
+
+CREATE TRIGGER on_delete_tag_list
+AFTER DELETE ON tag_list
+BEGIN                                                     
+  UPDATE recipe
+  SET time_modified = datetime()
+  WHERE id = OLD.recipe_id;
+END;
+
+CREATE TRIGGER on_delete_comment_list
+AFTER DELETE ON comment_list
+BEGIN                                                     
+  UPDATE recipe
+  SET time_modified = datetime()
+  WHERE id = OLD.recipe_id;
+END;
+
+CREATE TRIGGER on_update_tag
+AFTER UPDATE ON tag
+BEGIN                                                     
+  UPDATE tag
+  SET time_modified = datetime()
+  WHERE id = NEW.id;
+END;
+
+COMMIT;
+
+pragma user_version=7;",
+"Add triggers that keep modification time up to date. Add on delete cascade clause;");
+COMMIT;
