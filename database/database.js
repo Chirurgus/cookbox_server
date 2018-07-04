@@ -325,6 +325,7 @@ exports.get_recipe = async function(id) {
 exports.put_recipe = async function(recipe) {
     return new Promise(async (resolve,reject) => { 
         db = await open_recipe_db(db_location,sqlite3.OPEN_READONLY);
+        
         //Check tag is present
         var tag_ok = false;
         db.get("SELECT * from tag WHERE id = ?", [recipe.id], (err,row) => {
@@ -342,10 +343,9 @@ exports.put_recipe = async function(recipe) {
         db.serialize(() => {
             db.run("BEGIN");
             
-            time = time_token();
             if (!recipe.id) {
-                db.run("INSERT INTO recipe(name,short_description,long_description,target_quantity,target_description,preparation_time,source,time_modified) values(?,?,?,?,?,?,?,?)",
-                        [recipe.name,recipe.short_description,recipe.long_description,recipe.target_quantity,recipe.target_description,recipe.preparation_time,recipe.source,time],
+                db.run("INSERT INTO recipe(name,short_description,long_description,target_quantity,target_description,preparation_time,source) values(?,?,?,?,?,?,?)",
+                        [recipe.name,recipe.short_description,recipe.long_description,recipe.target_quantity,recipe.target_description,recipe.preparation_time,recipe.source],
                         (err) => {
                             if (err) reject(err);
                             recipe.id = this.lastID;
@@ -353,8 +353,8 @@ exports.put_recipe = async function(recipe) {
                 );
             }
             else {
-                db.run("UPDATE OR ROLLBACK recipe SET name=?,short_description=?,long_description=?,target_quantity=?,target_description=?,preparation_time=?,source=?,time_modified=? WHERE id=?",
-                        [recipe.name,recipe.short_description,recipe.long_description,recipe.target_quantity,recipe.target_description,recipe.preparation_time,recipe.source,time,recipe.id],
+                db.run("UPDATE OR ROLLBACK recipe SET name=?,short_description=?,long_description=?,target_quantity=?,target_description=?,preparation_time=?,source=? WHERE id=?",
+                        [recipe.name,recipe.short_description,recipe.long_description,recipe.target_quantity,recipe.target_description,recipe.preparation_time,recipe.source,recipe.id],
                         reject
                 );
             }

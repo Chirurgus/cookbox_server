@@ -78,6 +78,12 @@ router.get("/schema/migration/:ver", function(req,res) {
 });
 
 
+router.post('', function (req, res) {
+    recipe_db.put_recipe(req.body)
+        .then((recipe) => res.status(200).send(JSON.stringify(recipe.id)) )
+        .catch((err) => res.status(500).send(err.message) );
+});
+
 
 router.put('', function (req, res) {
     recipe_db.put_recipe(req.body)
