@@ -22,7 +22,7 @@ GET
 /recipe  
 -------/:id        GET recipe with id :id {id:...,name:...,....}  
 -------/ids        GET a list of all recipe ids => {ids:[...]}  
--------/sync       GET a list of all recipe ids that were updated since the time in sync-token {token: "...." } => {recipe_ids:[...], tag_ids:[...], token: "...", schema_version: "..."}  
+-------/sync       GET a list of all recipe ids that were updated since the time in sync-token => {recipe_ids:[...], tag_ids:[...], token: "...", schema_version: "..."}  
 -------/tag/:id    GET the tag with the id :id => {id:...,tag:...}  
 -------/tag/ids    GET all tag ids => {ids:[...]}  
 -------/schema/schema/:ver GET the recipe database schema for a given version => {schema: "..."}
