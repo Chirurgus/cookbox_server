@@ -30,8 +30,13 @@ GET
 
 PUT  
 /recipe  
--------/           PUT a new recipe, returns the recipe's new id => {id:...}  
--------/tag        PUT a new tag, expects {id:...,tag:...}, returns the tag's new id => {id:...}
+-------/           UPDATE an existing recipe, returns the recipe's new id => {id:...}  
+-------/tag        UPDATE an existing tag, expects {id:...,tag:...}, returns the tag's new id => {id:...}
+
+POST  
+/recipe  
+-------/           POST a new recipe, returns the recipe's new id => {id:...}  
+-------/tag        POST a new tag, expects {id:...,tag:...}, returns the tag's new id => {id:...}
 
 DELETE  
 /recipe  
