@@ -198,6 +198,52 @@ function close_db(db) {
     });
 }
 
+exports.recipe_in_db = async function (id) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            db = await open_recipe_db(db_location,sqlite3.OPEN_READWRITE);
+        
+            let sql = 'SELECT count(*) AS idCount FROM recipe WHERE id = ?';
+            let params = [id];
+
+            db.get(sql, params, (err, row) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                resolve(row.idCount > 0);
+            });
+            close_db(db);
+        }
+        catch (err) {
+            reject(err);
+        }
+    });
+}
+
+exports.tag_in_db = async function (id) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            db = await open_recipe_db(db_location,sqlite3.OPEN_READWRITE);
+        
+            let sql = 'SELECT count(*) AS idCount FROM tag WHERE id = ?';
+            let params = [id];
+
+            db.get(sql, params, (err, row) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                resolve(row.idCount > 0);
+            });
+            close_db(db);
+        }
+        catch (err) {
+            reject(err);
+        }
+    });
+}
+
 async function read_ingredient_list(id, db) {
     return new Promise( (resolve, reject) => {
         let sql = 'SELECT quantity,description,other_recipe FROM ingredient_list WHERE recipe_id = ?';

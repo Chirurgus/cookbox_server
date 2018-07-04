@@ -79,21 +79,62 @@ router.get("/schema/migration/:ver", function(req,res) {
 
 
 router.post('', function (req, res) {
-    recipe_db.put_recipe(req.body)
-        .then((recipe) => res.status(200).send(JSON.stringify(recipe.id)) )
-        .catch((err) => res.status(500).send(err.message) );
+    recipe_db.recipe_in_db(req.body.id)
+        .then((ret) => {
+            if (ret) {
+                res.status(500).send("Recipe with this id is already in the database");
+            }
+            else {
+                recipe_db.put_recipe(req.body.id)
+                    .then((ret) => res.status(200).send({"id": ret}))
+                    .catch((err) => res.status(500).send(err) );
+            }
+        })
+        .catch((err) => res.status(500).send(err));
+});
+router.post('/tag', function (req, res) {
+    recipe_db.tag_in_db(req.body.id)
+        .then((ret) => {
+            if (ret) {
+                res.status(500).send("Tag with this id is already in the database");
+            }
+            else {
+                recipe_db.put_tag(req.body.id)
+                    .then((ret) => res.status(200).send({"id": ret}))
+                    .catch((err) => res.status(500).send(err) );
+            }
+        })
+        .catch((err) => res.status(500).send(err));
 });
 
 
 router.put('', function (req, res) {
-    recipe_db.put_recipe(req.body)
-        .then((recipe) => res.status(200).send(JSON.stringify(recipe.id)) )
-        .catch((err) => res.status(500).send(err.message) );
+    recipe_db.recipe_in_db(req.body.id)
+        .then((ret) => {
+            if (ret) {
+                recipe_db.put_recipe(req.body.id)
+                    .then((ret) => res.status(200).send({"id": ret}))
+                    .catch((err) => res.status(500).send(err) );
+            }
+            else {
+                res.status(500).send("No Recipe such id in the database");
+            }
+        })
+        .catch((err) => res.status(500).send(err));
 });
 router.put('/tag', function (req, res) {
-    recipe_db.put_tag(req.body)
-        .then(() => res.status(200).send(JSON.stringify(tag.id)))
-        .catch((err) => res.status(500).send(err.message) );
+    recipe_db.tag_in_db(req.body.id)
+        .then((ret) => {
+            if (ret) {
+                recipe_db.put_tag(req.body.id)
+                    .then((ret) => res.status(200).send({"id": ret}))
+                    .catch((err) => res.status(500).send(err) );
+            }
+            else {
+                res.status(500).send("No Recipe such id in the database");
+            }
+        })
+        .catch((err) => res.status(500).send(err));
 });
 
 
@@ -120,7 +161,9 @@ async function f(req,res) {
 }
 
 router.get('/test/:test', function (req,res) {
-    res.status(200).send(JSON.stringify(new Date()));
+    recipe_db.recipe_in_db(req.params.test)
+        .then((ret) => res.status(200).send({"count":ret}))
+        .catch((err) => res.status(500).send(err));
 });
 
 module.exports = router;
