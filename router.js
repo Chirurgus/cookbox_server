@@ -62,7 +62,7 @@ router.get('/tag/:adr', function (req, res) {
     }
     else {
         recipe_db.get_tag(req.params.adr)
-            .then((recipe) => res.status(200).send(JSON.stringify(recipe)) )
+            .then((tag) => res.status(200).send(JSON.stringify(tag)) )
             .catch((err) => res.status(500).send(err.message) );
     }
 });

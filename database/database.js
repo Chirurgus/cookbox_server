@@ -13,6 +13,8 @@ class Recipe {
                 target_description,
                 preparation_time,
                 source,
+                time_modified,
+                deleted,
                 ingredient_list,
                 instruction_list,
                 comment_list,
@@ -25,6 +27,8 @@ class Recipe {
         this.target_description = target_description;
         this.preparation_time = preparation_time;
         this.source = source;
+        this.time_modified = time_modified;
+        this.deleted = deleted;
         this.ingredient_list = ingredient_list;
         this.instruction_list = instruction_list;
         this.comment_list = comment_list;
@@ -41,9 +45,10 @@ class Ingredient {
 }
 
 class Tag {
-    constructor(id, tag) {
+    constructor(id, tag, time_modified) {
         this.id = id;
         this.tag = tag;
+        this.time_modified = time_modified;
     }
 }
 
@@ -481,7 +486,7 @@ exports.all_tags = async function() {
 exports.get_tag = async function(id) {
     return new Promise( async (resolve,reject) => {
         db = await open_recipe_db(db_location, sqlite3.OPEN_READONLY);
-        db.get("SELECT id,tag FROM tag WHERE id = ?", [id], (err, row) => {
+        db.get("SELECT * FROM tag WHERE id = ?", [id], (err, row) => {
             if (err) {
                 reject(err);
                 return;
@@ -491,7 +496,7 @@ exports.get_tag = async function(id) {
                 return;
             }
             close_db(db);
-            tag = new Tag(row.id, row.tag);
+            tag = new Tag(row.id, row.tag, row.time_modified);
             resolve(tag);
         });
     });
