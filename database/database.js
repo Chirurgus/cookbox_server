@@ -359,6 +359,8 @@ exports.get_recipe = async function(id) {
                                 row.target_description,
                                 row.preparation_time,
                                 row.source,
+                                time_modified,
+                                deleted,
                                 ingredient_list,
                                 instruction_list,
                                 comment_list,
